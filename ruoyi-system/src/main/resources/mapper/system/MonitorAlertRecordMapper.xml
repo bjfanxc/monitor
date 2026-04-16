@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.MonitorAlertRecordMapper">
+
+    <resultMap id="MonitorAlertRecordResult" type="com.ruoyi.system.domain.MonitorAlertRecord">
+        <id property="id" column="id" />
+        <result property="appId" column="app_id" />
+        <result property="productName" column="product_name" />
+        <result property="appName" column="app_name" />
+        <result property="bundleId" column="bundle_id" />
+        <result property="storePlatform" column="store_platform" />
+        <result property="region" column="region" />
+        <result property="channelType" column="channel_type" />
+        <result property="alertType" column="alert_type" />
+        <result property="alertMessage" column="alert_message" />
+        <result property="alertTime" column="alert_time" />
+        <result property="extJson" column="ext_json" />
+        <result property="delFlag" column="del_flag" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <select id="selectMonitorAlertRecordList" parameterType="com.ruoyi.system.domain.MonitorAlertRecord" resultMap="MonitorAlertRecordResult">
+        select r.id, r.app_id, a.product_name, a.app_name, a.bundle_id, a.store_platform, a.region,
+               r.channel_type, r.alert_type, r.alert_message, r.alert_time,
+               cast(r.ext_json as char) as ext_json, r.del_flag, r.create_by,
+               r.create_time, r.update_by, r.update_time, r.remark
+        from monitor_alert_record r
+        left join monitor_app a on a.id = r.app_id
+        <where>
+            r.del_flag = '0'
+            <if test="keyword != null and keyword != ''">
+                and (a.product_name like concat('%', #{keyword}, '%')
+                or a.app_name like concat('%', #{keyword}, '%')
+                or a.bundle_id like concat('%', #{keyword}, '%'))
+            </if>
+            <if test="channelType != null and channelType != ''">
+                and r.channel_type = #{channelType}
+            </if>
+            <if test="alertType != null and alertType != ''">
+                and r.alert_type = #{alertType}
+            </if>
+        </where>
+        order by r.alert_time desc, r.id desc
+    </select>
+
+</mapper>

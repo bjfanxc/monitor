@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.MonitorAlertChannelMapper">
+
+    <resultMap id="MonitorAlertChannelResult" type="com.ruoyi.system.domain.MonitorAlertChannel">
+        <id property="id" column="id" />
+        <result property="channelType" column="channel_type" />
+        <result property="name" column="name" />
+        <result property="botToken" column="bot_token" />
+        <result property="chatId" column="chat_id" />
+        <result property="enabled" column="enabled" />
+        <result property="delFlag" column="del_flag" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectMonitorAlertChannelVo">
+        select id, channel_type, name, bot_token, chat_id, enabled,
+               del_flag, create_by, create_time, update_by, update_time, remark
+        from monitor_alert_channel
+    </sql>
+
+    <select id="selectMonitorAlertChannelById" parameterType="Long" resultMap="MonitorAlertChannelResult">
+        <include refid="selectMonitorAlertChannelVo" />
+        where id = #{id}
+          and channel_type = 'telegram'
+          and del_flag = '0'
+    </select>
+
+    <select id="selectTelegramChannelList" parameterType="com.ruoyi.system.domain.MonitorAlertChannel" resultMap="MonitorAlertChannelResult">
+        <include refid="selectMonitorAlertChannelVo" />
+        <where>
+            channel_type = 'telegram'
+            and del_flag = '0'
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="enabled != null">
+                and enabled = #{enabled}
+            </if>
+        </where>
+        order by update_time desc, create_time desc, id desc
+    </select>
+
+    <insert id="insertMonitorAlertChannel" parameterType="com.ruoyi.system.domain.MonitorAlertChannel" useGeneratedKeys="true" keyProperty="id">
+        insert into monitor_alert_channel(
+            <if test="channelType != null and channelType != ''">channel_type,</if>
+            <if test="name != null and name != ''">name,</if>
+            <if test="botToken != null and botToken != ''">bot_token,</if>
+            <if test="chatId != null and chatId != ''">chat_id,</if>
+            <if test="enabled != null">enabled,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="channelType != null and channelType != ''">#{channelType},</if>
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="botToken != null and botToken != ''">#{botToken},</if>
+            <if test="chatId != null and chatId != ''">#{chatId},</if>
+            <if test="enabled != null">#{enabled},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateMonitorAlertChannel" parameterType="com.ruoyi.system.domain.MonitorAlertChannel">
+        update monitor_alert_channel
+        <set>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="botToken != null and botToken != ''">bot_token = #{botToken},</if>
+            <if test="chatId != null and chatId != ''">chat_id = #{chatId},</if>
+            <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+          and channel_type = 'telegram'
+          and del_flag = '0'
+    </update>
+
+    <delete id="deleteMonitorAlertChannelById" parameterType="Long">
+        update monitor_alert_channel
+        set del_flag = '1',
+            update_time = sysdate()
+        where id = #{id}
+          and channel_type = 'telegram'
+          and del_flag = '0'
+    </delete>
+
+</mapper>

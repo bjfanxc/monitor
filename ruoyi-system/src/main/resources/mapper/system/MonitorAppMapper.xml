@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.MonitorAppMapper">
+
+    <resultMap id="MonitorAppResult" type="com.ruoyi.system.domain.MonitorApp">
+        <id property="id" column="id" />
+        <result property="productName" column="product_name" />
+        <result property="appName" column="app_name" />
+        <result property="bundleId" column="bundle_id" />
+        <result property="storePlatform" column="store_platform" />
+        <result property="region" column="region" />
+        <result property="ownerType" column="owner_type" />
+        <result property="status" column="status" />
+        <result property="lastScanTime" column="last_scan_time" />
+        <result property="delFlag" column="del_flag" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectMonitorAppVo">
+        select id, product_name, app_name, bundle_id, store_platform, region, owner_type, status,
+               last_scan_time, del_flag, create_by, create_time, update_by, update_time, remark
+        from monitor_app
+    </sql>
+
+    <select id="selectMonitorAppOverview" resultType="com.ruoyi.system.domain.vo.MonitorAppOverviewVo">
+        select count(1) as totalApps,
+               ifnull(sum(case when status = 1 then 1 else 0 end), 0) as onlineApps,
+               ifnull(sum(case when status = 0 then 1 else 0 end), 0) as offlineApps
+        from monitor_app
+        where del_flag = '0'
+    </select>
+
+    <select id="selectMonitorAppById" parameterType="Long" resultMap="MonitorAppResult">
+        <include refid="selectMonitorAppVo" />
+        where id = #{id}
+          and del_flag = '0'
+    </select>
+
+    <select id="selectMonitorAppList" parameterType="com.ruoyi.system.domain.MonitorApp" resultMap="MonitorAppResult">
+        <include refid="selectMonitorAppVo" />
+        <where>
+            del_flag = '0'
+            <if test="keyword != null and keyword != ''">
+                and (product_name like concat('%', #{keyword}, '%')
+                or app_name like concat('%', #{keyword}, '%')
+                or bundle_id like concat('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="storePlatform != null and storePlatform != ''">
+                and store_platform = #{storePlatform}
+            </if>
+            <if test="region != null and region != ''">
+                and region = #{region}
+            </if>
+        </where>
+        order by update_time desc, create_time desc, id desc
+    </select>
+
+    <select id="selectMonitorAppByUniqueKey" parameterType="com.ruoyi.system.domain.MonitorApp" resultMap="MonitorAppResult">
+        <include refid="selectMonitorAppVo" />
+        where bundle_id = #{bundleId}
+          and store_platform = #{storePlatform}
+          and region = #{region}
+          and del_flag = '0'
+        <if test="id != null">
+          and id != #{id}
+        </if>
+        limit 1
+    </select>
+
+    <insert id="insertMonitorApp" parameterType="com.ruoyi.system.domain.MonitorApp" useGeneratedKeys="true" keyProperty="id">
+        insert into monitor_app(
+            <if test="productName != null and productName != ''">product_name,</if>
+            <if test="appName != null and appName != ''">app_name,</if>
+            <if test="bundleId != null and bundleId != ''">bundle_id,</if>
+            <if test="storePlatform != null and storePlatform != ''">store_platform,</if>
+            <if test="region != null and region != ''">region,</if>
+            <if test="ownerType != null and ownerType != ''">owner_type,</if>
+            <if test="status != null">status,</if>
+            <if test="lastScanTime != null">last_scan_time,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            <if test="productName != null and productName != ''">#{productName},</if>
+            <if test="appName != null and appName != ''">#{appName},</if>
+            <if test="bundleId != null and bundleId != ''">#{bundleId},</if>
+            <if test="storePlatform != null and storePlatform != ''">#{storePlatform},</if>
+            <if test="region != null and region != ''">#{region},</if>
+            <if test="ownerType != null and ownerType != ''">#{ownerType},</if>
+            <if test="status != null">#{status},</if>
+            <if test="lastScanTime != null">#{lastScanTime},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateMonitorApp" parameterType="com.ruoyi.system.domain.MonitorApp">
+        update monitor_app
+        <set>
+            <if test="productName != null and productName != ''">product_name = #{productName},</if>
+            <if test="appName != null and appName != ''">app_name = #{appName},</if>
+            <if test="bundleId != null and bundleId != ''">bundle_id = #{bundleId},</if>
+            <if test="storePlatform != null and storePlatform != ''">store_platform = #{storePlatform},</if>
+            <if test="region != null and region != ''">region = #{region},</if>
+            <if test="ownerType != null and ownerType != ''">owner_type = #{ownerType},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastScanTime != null">last_scan_time = #{lastScanTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+          and del_flag = '0'
+    </update>
+
+    <update id="updateMonitorAppStatus" parameterType="com.ruoyi.system.domain.MonitorApp">
+        update monitor_app
+        <set>
+            status = #{status},
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+          and del_flag = '0'
+    </update>
+
+    <delete id="deleteMonitorAppById" parameterType="Long">
+        update monitor_app
+        set del_flag = '1',
+            update_time = sysdate()
+        where id = #{id}
+          and del_flag = '0'
+    </delete>
+
+</mapper>
