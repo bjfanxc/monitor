@@ -1,74 +1,75 @@
 package com.ruoyi.system.mapper;
 
-
 import com.ruoyi.system.domain.MonitorApp;
 import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
 
 import java.util.List;
 
 /**
- * 搴旂敤鐩戞帶鏁版嵁灞? * 
+ * 应用监控数据层
  */
 public interface MonitorAppMapper
 {
     /**
-     * 鏌ヨ搴旂敤鐩戞帶姒傝
-     * 
-     * @return 姒傝鏁版嵁
+     * 获取应用监控概览
+     *
+     * @return 应用概览
      */
-    public MonitorAppOverviewVo selectMonitorAppOverview();
+    MonitorAppOverviewVo selectMonitorAppOverview();
 
     /**
-     * 鏍规嵁ID鏌ヨ搴旂敤
-     * 
-     * @param id 搴旂敤ID
-     * @return 搴旂敤淇℃伅
+     * 根据ID查询应用监控
+     *
+     * @param id 应用ID
+     * @return 应用信息
      */
-    public MonitorApp selectMonitorAppById(Long id);
+    MonitorApp selectMonitorAppById(Long id);
 
     /**
-     * 鏌ヨ搴旂敤鍒楄〃
-     * 
-     * @param monitorApp 鏌ヨ鏉′欢
-     * @return 搴旂敤鍒楄〃
+     * 获取应用监控列表
+     *
+     * @param monitorApp 查询条件
+     * @return 应用监控列表
      */
-    public List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp);
+    List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp);
 
     /**
-     * 鏌ヨ鍞竴閿搴斿簲鐢?     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 搴旂敤淇℃伅
+     * 根据唯一键查询应用
+     *
+     * @param monitorApp 应用信息
+     * @return 应用信息
      */
-    public MonitorApp selectMonitorAppByUniqueKey(MonitorApp monitorApp);
+    MonitorApp selectMonitorAppByUniqueKey(MonitorApp monitorApp);
 
     /**
-     * 鏂板搴旂敤
-     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 缁撴灉
+     * 新增应用监控
+     *
+     * @param monitorApp 应用信息
+     * @return 结果
      */
-    public int insertMonitorApp(MonitorApp monitorApp);
+    int insertMonitorApp(MonitorApp monitorApp);
 
     /**
-     * 淇敼搴旂敤
-     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 缁撴灉
+     * 修改应用监控
+     *
+     * @param monitorApp 应用信息
+     * @return 结果
      */
-    public int updateMonitorApp(MonitorApp monitorApp);
+    int updateMonitorApp(MonitorApp monitorApp);
 
     /**
-     * 淇敼搴旂敤鐘舵€?     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 缁撴灉
+     * 修改应用状态
+     *
+     * @param monitorApp 应用信息
+     * @return 结果
      */
-    public int updateMonitorAppStatus(MonitorApp monitorApp);
+    int updateMonitorAppStatus(MonitorApp monitorApp);
 
     /**
-     * 閫昏緫鍒犻櫎搴旂敤
-     * 
-     * @param id 搴旂敤ID
-     * @return 缁撴灉
+     * 删除应用监控
+     *
+     * @param id 应用ID
+     * @return 结果
      */
-    public int deleteMonitorAppById(Long id);
+    int deleteMonitorAppById(Long id);
 }

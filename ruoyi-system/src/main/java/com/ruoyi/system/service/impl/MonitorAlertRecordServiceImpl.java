@@ -1,16 +1,15 @@
 package com.ruoyi.system.service.impl;
 
-import com.monitor.system.domain.MonitorAlertRecord;
-import com.monitor.system.mapper.MonitorAlertRecordMapper;
-import com.monitor.system.service.IMonitorAlertRecordService;
+import com.ruoyi.system.domain.MonitorAlertRecord;
+import com.ruoyi.system.mapper.MonitorAlertRecordMapper;
+import com.ruoyi.system.service.IMonitorAlertRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 鍛婅璁板綍鏈嶅姟瀹炵幇
- * 
+ * 告警记录服务实现
  */
 @Service
 public class MonitorAlertRecordServiceImpl implements IMonitorAlertRecordService

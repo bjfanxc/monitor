@@ -4,26 +4,25 @@ import com.ruoyi.common.core.domain.BaseEntity;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
- * 鍛婅娓犻亾瀵硅薄 monitor_alert_channel
- * 
+ * 告警渠道对象 monitor_alert_channel
  */
 public class MonitorAlertChannel extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 涓婚敭 */
+    /** 主键 */
     private Long id;
 
-    /** 娓犻亾绫诲瀷 */
+    /** 渠道类型 */
     private String channelType;
 
-    /** 娓犻亾鍚嶇О */
+    /** 渠道名称 */
     private String name;
 
     /** Telegram Bot Token */
@@ -32,10 +31,10 @@ public class MonitorAlertChannel extends BaseEntity
     /** Telegram Chat ID */
     private String chatId;
 
-    /** 鏄惁鍚敤锛?鍚敤 0绂佺敤 */
+    /** 启用状态：1启用 0禁用 */
     private Integer enabled;
 
-    /** 鍒犻櫎鏍囪 */
+    /** 删除标记 */
     private String delFlag;
 
     public Long getId()
@@ -58,8 +57,8 @@ public class MonitorAlertChannel extends BaseEntity
         this.channelType = channelType;
     }
 
-    @NotBlank(message = "娓犻亾鍚嶇О涓嶈兘涓虹┖")
-    @Size(min = 0, max = 100, message = "娓犻亾鍚嶇О闀垮害涓嶈兘瓒呰繃100涓瓧绗?)
+    @NotBlank(message = "渠道名称不能为空")
+    @Size(min = 0, max = 100, message = "渠道名称长度不能超过100个字符")
     public String getName()
     {
         return name;
@@ -70,8 +69,8 @@ public class MonitorAlertChannel extends BaseEntity
         this.name = name;
     }
 
-    @NotBlank(message = "Bot Token涓嶈兘涓虹┖")
-    @Size(min = 0, max = 255, message = "Bot Token闀垮害涓嶈兘瓒呰繃255涓瓧绗?)
+    @NotBlank(message = "Bot Token不能为空")
+    @Size(min = 0, max = 255, message = "Bot Token长度不能超过255个字符")
     public String getBotToken()
     {
         return botToken;
@@ -82,8 +81,8 @@ public class MonitorAlertChannel extends BaseEntity
         this.botToken = botToken;
     }
 
-    @NotBlank(message = "Chat ID涓嶈兘涓虹┖")
-    @Size(min = 0, max = 64, message = "Chat ID闀垮害涓嶈兘瓒呰繃64涓瓧绗?)
+    @NotBlank(message = "Chat ID不能为空")
+    @Size(min = 0, max = 64, message = "Chat ID长度不能超过64个字符")
     public String getChatId()
     {
         return chatId;
@@ -94,8 +93,8 @@ public class MonitorAlertChannel extends BaseEntity
         this.chatId = chatId;
     }
 
-    @Min(value = 0, message = "鍚敤鐘舵€佸彧鑳戒负0鎴?")
-    @Max(value = 1, message = "鍚敤鐘舵€佸彧鑳戒负0鎴?")
+    @Min(value = 0, message = "启用状态只能为0或1")
+    @Max(value = 1, message = "启用状态只能为0或1")
     public Integer getEnabled()
     {
         return enabled;

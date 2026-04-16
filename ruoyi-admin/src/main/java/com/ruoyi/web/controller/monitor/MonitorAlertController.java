@@ -13,8 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 鍛婅璁板綍绠＄悊
- * 
+ * 告警记录管理
  */
 @RestController
 @RequestMapping("/monitor/alert")
@@ -24,7 +23,7 @@ public class MonitorAlertController extends BaseController
     private IMonitorAlertRecordService monitorAlertRecordService;
 
     /**
-     * 鑾峰彇鍛婅璁板綍鍒楄〃
+     * 获取告警记录列表
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:list')")
     @GetMapping("/list")

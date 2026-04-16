@@ -1,66 +1,71 @@
 package com.ruoyi.system.service;
 
-import com.monitor.system.domain.MonitorApp;
-import com.monitor.system.domain.dto.MonitorAppStatusDto;
-import com.monitor.system.domain.vo.MonitorAppOverviewVo;
+import com.ruoyi.system.domain.MonitorApp;
+import com.ruoyi.system.domain.dto.MonitorAppStatusDto;
+import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
 
 import java.util.List;
 
 /**
- * 搴旂敤鐩戞帶鏈嶅姟灞? * 
+ * 应用监控服务接口
  */
 public interface IMonitorAppService
 {
     /**
-     * 鏌ヨ搴旂敤鐩戞帶姒傝
-     * 
-     * @return 姒傝鏁版嵁
+     * 获取应用监控概览
+     *
+     * @return 应用概览
      */
-    public MonitorAppOverviewVo selectMonitorAppOverview();
+    MonitorAppOverviewVo selectMonitorAppOverview();
 
     /**
-     * 鏌ヨ搴旂敤鍒楄〃
-     * 
-     * @param monitorApp 鏌ヨ鏉′欢
-     * @return 搴旂敤鍒楄〃
+     * 获取应用监控列表
+     *
+     * @param monitorApp 查询条件
+     * @return 应用监控列表
      */
-    public List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp);
+    List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp);
 
     /**
-     * 鏂板搴旂敤
-     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 缁撴灉
+     * 新增应用监控
+     *
+     * @param monitorApp 应用监控信息
+     * @return 结果
      */
-    public int insertMonitorApp(MonitorApp monitorApp);
+    int insertMonitorApp(MonitorApp monitorApp);
 
     /**
-     * 淇敼搴旂敤
-     * 
-     * @param monitorApp 搴旂敤淇℃伅
-     * @return 缁撴灉
+     * 修改应用监控
+     *
+     * @param monitorApp 应用监控信息
+     * @return 结果
      */
-    public int updateMonitorApp(MonitorApp monitorApp);
+    int updateMonitorApp(MonitorApp monitorApp);
 
     /**
-     * 鍒犻櫎搴旂敤
-     * 
-     * @param id 搴旂敤ID
-     * @return 缁撴灉
+     * 删除应用监控
+     *
+     * @param id 应用ID
+     * @return 结果
      */
-    public int deleteMonitorAppById(Long id);
+    int deleteMonitorAppById(Long id);
 
     /**
-     * 淇敼搴旂敤鐘舵€?     * 
-     * @param statusDto 鐘舵€佷俊鎭?     * @param updateBy 鏇存柊浜?     * @return 缁撴灉
+     * 修改应用状态
+     *
+     * @param statusDto 状态参数
+     * @param updateBy 更新人
+     * @return 结果
      */
-    public int updateMonitorAppStatus(MonitorAppStatusDto statusDto, String updateBy);
+    int updateMonitorAppStatus(MonitorAppStatusDto statusDto, String updateBy);
 
     /**
-     * 鎵归噺瀵煎叆搴旂敤
-     * 
-     * @param appList 搴旂敤鍒楄〃
-     * @param updateSupport 鏄惁鏇存柊宸插瓨鍦ㄦ暟鎹?     * @param operName 鎿嶄綔浜?     * @return 瀵煎叆缁撴灉
+     * 导入应用监控数据
+     *
+     * @param appList 应用列表
+     * @param updateSupport 是否更新已存在数据
+     * @param operName 操作人
+     * @return 导入结果
      */
-    public String importMonitorApp(List<MonitorApp> appList, boolean updateSupport, String operName);
+    String importMonitorApp(List<MonitorApp> appList, boolean updateSupport, String operName);
 }

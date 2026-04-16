@@ -1,20 +1,19 @@
 package com.ruoyi.system.service.impl;
 
-import com.monitor.common.exception.ServiceException;
-import com.monitor.common.utils.StringUtils;
-import com.monitor.system.domain.MonitorApp;
-import com.monitor.system.domain.dto.MonitorAppStatusDto;
-import com.monitor.system.domain.vo.MonitorAppOverviewVo;
-import com.monitor.system.mapper.MonitorAppMapper;
-import com.monitor.system.service.IMonitorAppService;
+import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.system.domain.MonitorApp;
+import com.ruoyi.system.domain.dto.MonitorAppStatusDto;
+import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
+import com.ruoyi.system.mapper.MonitorAppMapper;
+import com.ruoyi.system.service.IMonitorAppService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 搴旂敤鐩戞帶鏈嶅姟瀹炵幇
- * 
+ * 应用监控服务实现
  */
 @Service
 public class MonitorAppServiceImpl implements IMonitorAppService
@@ -55,7 +54,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         if (monitorApp.getId() == null)
         {
-            throw new ServiceException("搴旂敤ID涓嶈兘涓虹┖");
+            throw new ServiceException("应用ID不能为空");
         }
         normalizeMonitorApp(monitorApp);
         ensureMonitorAppExists(monitorApp.getId());
@@ -84,7 +83,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         if (StringUtils.isNull(appList) || appList.isEmpty())
         {
-            throw new ServiceException("瀵煎叆搴旂敤鏁版嵁涓嶈兘涓虹┖");
+            throw new ServiceException("导入应用数据不能为空！");
         }
         int successNum = 0;
         int failureNum = 0;
@@ -111,7 +110,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                     }
                     monitorAppMapper.insertMonitorApp(monitorApp);
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append("銆佸簲鐢?").append(monitorApp.getAppName()).append(" 瀵煎叆鎴愬姛");
+                    successMsg.append("<br/>").append(successNum).append("、应用 ").append(monitorApp.getAppName()).append(" 导入成功");
                 }
                 else if (updateSupport)
                 {
@@ -126,52 +125,52 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                     }
                     monitorAppMapper.updateMonitorApp(monitorApp);
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append("銆佸簲鐢?").append(monitorApp.getAppName()).append(" 鏇存柊鎴愬姛");
+                    successMsg.append("<br/>").append(successNum).append("、应用 ").append(monitorApp.getAppName()).append(" 更新成功");
                 }
                 else
                 {
                     failureNum++;
-                    failureMsg.append("<br/>").append(failureNum).append("銆佸簲鐢?").append(monitorApp.getAppName())
-                        .append(" 宸插瓨鍦紙bundleId + storePlatform + region锛夛紝濡傞渶瑕嗙洊璇峰嬀閫夋洿鏂?);
+                    failureMsg.append("<br/>").append(failureNum).append("、应用 ").append(monitorApp.getAppName())
+                        .append(" 已存在，唯一键 bundleId + storePlatform + region 冲突");
                 }
             }
             catch (Exception e)
             {
                 failureNum++;
-                String appName = StringUtils.isNotBlank(monitorApp.getAppName()) ? monitorApp.getAppName() : "鏈懡鍚嶅簲鐢?;
-                failureMsg.append("<br/>").append(failureNum).append("銆佸簲鐢?").append(appName).append(" 瀵煎叆澶辫触锛?)
+                String appName = StringUtils.isNotBlank(monitorApp.getAppName()) ? monitorApp.getAppName() : "未命名应用";
+                failureMsg.append("<br/>").append(failureNum).append("、应用 ").append(appName).append(" 导入失败：")
                     .append(e.getMessage());
             }
         }
         if (failureNum > 0)
         {
-            failureMsg.insert(0, "寰堟姳姝夛紝瀵煎叆澶辫触锛佸叡 " + failureNum + " 鏉℃暟鎹紓甯革紝閿欒濡備笅锛?);
+            failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据存在问题，详情如下：");
             throw new ServiceException(failureMsg.toString());
         }
-        return "鎭枩鎮紝鏁版嵁宸插叏閮ㄥ鍏ユ垚鍔燂紒鍏?" + successNum + " 鏉★紝璇︽儏濡備笅锛? + successMsg;
+        return "恭喜，数据已全部导入成功！共 " + successNum + " 条，详情如下：" + successMsg;
     }
 
     private void validateImportRow(MonitorApp monitorApp)
     {
         if (StringUtils.isBlank(monitorApp.getProductName()))
         {
-            throw new ServiceException("浜у搧鍚嶇О涓嶈兘涓虹┖");
+            throw new ServiceException("产品名称不能为空");
         }
         if (StringUtils.isBlank(monitorApp.getAppName()))
         {
-            throw new ServiceException("搴旂敤鍚嶇О涓嶈兘涓虹┖");
+            throw new ServiceException("应用名称不能为空");
         }
         if (StringUtils.isBlank(monitorApp.getBundleId()))
         {
-            throw new ServiceException("鍖呭悕 / Bundle ID 涓嶈兘涓虹┖");
+            throw new ServiceException("包名 / Bundle ID 不能为空");
         }
         if (StringUtils.isBlank(monitorApp.getStorePlatform()))
         {
-            throw new ServiceException("鍟嗗簵骞冲彴涓嶈兘涓虹┖");
+            throw new ServiceException("商店平台不能为空");
         }
         if (StringUtils.isBlank(monitorApp.getRegion()))
         {
-            throw new ServiceException("鍦板尯涓嶈兘涓虹┖");
+            throw new ServiceException("地区不能为空");
         }
     }
 
@@ -194,7 +193,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         MonitorApp exists = monitorAppMapper.selectMonitorAppByUniqueKey(monitorApp);
         if (exists != null && !exists.getId().equals(monitorApp.getId()))
         {
-            throw new ServiceException("搴旂敤鍞竴閿啿绐侊細bundleId + storePlatform + region 宸插瓨鍦?);
+            throw new ServiceException("应用唯一键冲突，请检查 bundleId + storePlatform + region 是否重复");
         }
     }
 
@@ -202,12 +201,12 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         if (id == null)
         {
-            throw new ServiceException("搴旂敤ID涓嶈兘涓虹┖");
+            throw new ServiceException("应用ID不能为空");
         }
         MonitorApp monitorApp = monitorAppMapper.selectMonitorAppById(id);
         if (monitorApp == null)
         {
-            throw new ServiceException("搴旂敤涓嶅瓨鍦ㄦ垨宸插垹闄?);
+            throw new ServiceException("应用不存在或已被删除");
         }
         return monitorApp;
     }

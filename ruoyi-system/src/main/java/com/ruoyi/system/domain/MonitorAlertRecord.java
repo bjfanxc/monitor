@@ -1,7 +1,7 @@
 package com.ruoyi.system.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.monitor.common.core.domain.BaseEntity;
+import com.ruoyi.common.core.domain.BaseEntity;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -9,7 +9,6 @@ import java.util.Date;
 
 /**
  * 告警记录对象 monitor_alert_record
- * 
  */
 public class MonitorAlertRecord extends BaseEntity
 {
@@ -55,7 +54,7 @@ public class MonitorAlertRecord extends BaseEntity
     /** 删除标记 */
     private String delFlag;
 
-    /** 关键�?*/
+    /** 关键字 */
     private String keyword;
 
     public Long getId()

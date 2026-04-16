@@ -10,13 +10,19 @@ import com.ruoyi.system.service.IMonitorAlertChannelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Telegram 鍛婅娓犻亾绠＄悊
- * 
+ * Telegram 告警渠道管理
  */
 @RestController
 @RequestMapping("/monitor/alert/channel/telegram")
@@ -26,7 +32,7 @@ public class MonitorAlertChannelController extends BaseController
     private IMonitorAlertChannelService monitorAlertChannelService;
 
     /**
-     * 鑾峰彇 Telegram 娓犻亾鍒楄〃
+     * 获取 Telegram 渠道列表
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:list')")
     @GetMapping("/list")
@@ -38,10 +44,10 @@ public class MonitorAlertChannelController extends BaseController
     }
 
     /**
-     * 鏂板 Telegram 娓犻亾
+     * 新增 Telegram 渠道
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:add')")
-    @Log(title = "Telegram鍛婅娓犻亾", businessType = BusinessType.INSERT)
+    @Log(title = "Telegram告警渠道", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody MonitorAlertChannel channel)
     {
@@ -50,10 +56,10 @@ public class MonitorAlertChannelController extends BaseController
     }
 
     /**
-     * 淇敼 Telegram 娓犻亾
+     * 修改 Telegram 渠道
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:edit')")
-    @Log(title = "Telegram鍛婅娓犻亾", businessType = BusinessType.UPDATE)
+    @Log(title = "Telegram告警渠道", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody MonitorAlertChannel channel)
     {
@@ -62,10 +68,10 @@ public class MonitorAlertChannelController extends BaseController
     }
 
     /**
-     * 鍒犻櫎 Telegram 娓犻亾
+     * 删除 Telegram 渠道
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:remove')")
-    @Log(title = "Telegram鍛婅娓犻亾", businessType = BusinessType.DELETE)
+    @Log(title = "Telegram告警渠道", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id)
     {

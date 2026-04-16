@@ -1,17 +1,16 @@
 package com.ruoyi.system.service.impl;
 
-import com.monitor.common.exception.ServiceException;
-import com.monitor.system.domain.MonitorAlertChannel;
-import com.monitor.system.mapper.MonitorAlertChannelMapper;
-import com.monitor.system.service.IMonitorAlertChannelService;
+import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.system.domain.MonitorAlertChannel;
+import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
+import com.ruoyi.system.service.IMonitorAlertChannelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 鍛婅娓犻亾鏈嶅姟瀹炵幇
- * 
+ * 告警渠道服务实现
  */
 @Service
 public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelService
@@ -40,7 +39,7 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         if (channel.getId() == null)
         {
-            throw new ServiceException("娓犻亾ID涓嶈兘涓虹┖");
+            throw new ServiceException("渠道ID不能为空");
         }
         ensureMonitorAlertChannelExists(channel.getId());
         channel.setChannelType(TELEGRAM);
@@ -58,12 +57,12 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         if (id == null)
         {
-            throw new ServiceException("娓犻亾ID涓嶈兘涓虹┖");
+            throw new ServiceException("渠道ID不能为空");
         }
         MonitorAlertChannel channel = monitorAlertChannelMapper.selectMonitorAlertChannelById(id);
         if (channel == null)
         {
-            throw new ServiceException("Telegram 娓犻亾涓嶅瓨鍦ㄦ垨宸插垹闄?);
+            throw new ServiceException("Telegram 渠道不存在或已被删除");
         }
     }
 }
