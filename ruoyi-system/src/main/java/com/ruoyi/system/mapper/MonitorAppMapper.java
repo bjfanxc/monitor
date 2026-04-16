@@ -13,9 +13,10 @@ public interface MonitorAppMapper
     /**
      * 获取应用监控概览
      *
+     * @param monitorApp 查询条件
      * @return 应用概览
      */
-    MonitorAppOverviewVo selectMonitorAppOverview();
+    MonitorAppOverviewVo selectMonitorAppOverview(MonitorApp monitorApp);
 
     /**
      * 根据ID查询应用监控
@@ -64,6 +65,8 @@ public interface MonitorAppMapper
      * @return 结果
      */
     int updateMonitorAppStatus(MonitorApp monitorApp);
+
+    int updateMonitorAppScanInfo(MonitorApp monitorApp);
 
     /**
      * 删除应用监控

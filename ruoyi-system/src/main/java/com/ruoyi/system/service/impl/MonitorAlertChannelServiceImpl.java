@@ -1,6 +1,8 @@
 package com.ruoyi.system.service.impl;
 
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
 import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
@@ -24,6 +26,7 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     public List<MonitorAlertChannel> selectTelegramChannelList(MonitorAlertChannel channel)
     {
         channel.setChannelType(TELEGRAM);
+        applyDataPermission(channel);
         return monitorAlertChannelMapper.selectTelegramChannelList(channel);
     }
 
@@ -63,6 +66,24 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         if (channel == null)
         {
             throw new ServiceException("Telegram 渠道不存在或已被删除");
+        }
+        checkDataPermission(channel.getCreateBy());
+    }
+
+    private void applyDataPermission(MonitorAlertChannel channel)
+    {
+        if (channel == null || SecurityUtils.isAdmin())
+        {
+            return;
+        }
+        channel.getParams().put("currentUsername", SecurityUtils.getUsername());
+    }
+
+    private void checkDataPermission(String createBy)
+    {
+        if (!SecurityUtils.isAdmin() && !StringUtils.equals(SecurityUtils.getUsername(), createBy))
+        {
+            throw new ServiceException("无权操作其他用户的数据");
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.ruoyi.system.service.impl;
 
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.system.domain.MonitorAlertRecord;
 import com.ruoyi.system.mapper.MonitorAlertRecordMapper;
 import com.ruoyi.system.service.IMonitorAlertRecordService;
@@ -20,6 +21,10 @@ public class MonitorAlertRecordServiceImpl implements IMonitorAlertRecordService
     @Override
     public List<MonitorAlertRecord> selectMonitorAlertRecordList(MonitorAlertRecord alertRecord)
     {
+        if (!SecurityUtils.isAdmin())
+        {
+            alertRecord.getParams().put("currentUsername", SecurityUtils.getUsername());
+        }
         return monitorAlertRecordMapper.selectMonitorAlertRecordList(alertRecord);
     }
 }

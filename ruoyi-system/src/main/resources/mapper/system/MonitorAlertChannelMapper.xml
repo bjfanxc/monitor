@@ -43,7 +43,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="enabled != null">
                 and enabled = #{enabled}
             </if>
+            <if test="params.currentUsername != null and params.currentUsername != ''">
+                and create_by = #{params.currentUsername}
+            </if>
         </where>
+        order by update_time desc, create_time desc, id desc
+    </select>
+
+    <select id="selectEnabledTelegramChannelsByCreateBy" parameterType="String" resultMap="MonitorAlertChannelResult">
+        <include refid="selectMonitorAlertChannelVo" />
+        where channel_type = 'telegram'
+          and enabled = 1
+          and del_flag = '0'
+          and create_by = #{createBy}
         order by update_time desc, create_time desc, id desc
     </select>
 

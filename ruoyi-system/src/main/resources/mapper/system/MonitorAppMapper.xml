@@ -28,12 +28,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from monitor_app
     </sql>
 
-    <select id="selectMonitorAppOverview" resultType="com.ruoyi.system.domain.vo.MonitorAppOverviewVo">
+    <select id="selectMonitorAppOverview" parameterType="com.ruoyi.system.domain.MonitorApp" resultType="com.ruoyi.system.domain.vo.MonitorAppOverviewVo">
         select count(1) as totalApps,
                ifnull(sum(case when status = 1 then 1 else 0 end), 0) as onlineApps,
                ifnull(sum(case when status = 0 then 1 else 0 end), 0) as offlineApps
         from monitor_app
         where del_flag = '0'
+        <if test="params.currentUsername != null and params.currentUsername != ''">
+            and create_by = #{params.currentUsername}
+        </if>
     </select>
 
     <select id="selectMonitorAppById" parameterType="Long" resultMap="MonitorAppResult">
@@ -59,6 +62,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             </if>
             <if test="region != null and region != ''">
                 and region = #{region}
+            </if>
+            <if test="params.currentUsername != null and params.currentUsername != ''">
+                and create_by = #{params.currentUsername}
             </if>
         </where>
         order by update_time desc, create_time desc, id desc
@@ -127,6 +133,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update monitor_app
         <set>
             status = #{status},
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+          and del_flag = '0'
+    </update>
+
+    <update id="updateMonitorAppScanInfo" parameterType="com.ruoyi.system.domain.MonitorApp">
+        update monitor_app
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastScanTime != null">last_scan_time = #{lastScanTime},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
             update_time = sysdate()
         </set>

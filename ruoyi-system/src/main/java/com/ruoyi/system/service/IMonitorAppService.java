@@ -3,6 +3,7 @@ package com.ruoyi.system.service;
 import com.ruoyi.system.domain.MonitorApp;
 import com.ruoyi.system.domain.dto.MonitorAppStatusDto;
 import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
+import com.ruoyi.system.domain.vo.MonitorAppScanResultVo;
 
 import java.util.List;
 
@@ -68,4 +69,12 @@ public interface IMonitorAppService
      * @return 导入结果
      */
     String importMonitorApp(List<MonitorApp> appList, boolean updateSupport, String operName);
+
+    MonitorAppScanResultVo scanGooglePlayApp(Long id, String operator);
+
+    MonitorAppScanResultVo scanGooglePlayApp(Long id, String operator, String scanMode);
+
+    List<MonitorAppScanResultVo> scanGooglePlayApps(String operator);
+
+    List<MonitorAppScanResultVo> scanGooglePlayApps(String operator, String scanMode);
 }

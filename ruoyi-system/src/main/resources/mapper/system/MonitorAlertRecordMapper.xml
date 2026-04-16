@@ -45,8 +45,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="alertType != null and alertType != ''">
                 and r.alert_type = #{alertType}
             </if>
+            <if test="params.currentUsername != null and params.currentUsername != ''">
+                and a.create_by = #{params.currentUsername}
+            </if>
         </where>
         order by r.alert_time desc, r.id desc
     </select>
+
+    <insert id="insertMonitorAlertRecord" parameterType="com.ruoyi.system.domain.MonitorAlertRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into monitor_alert_record(
+            app_id, channel_type, alert_type, alert_message, alert_time,
+            <if test="extJson != null and extJson != ''">ext_json,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        ) values (
+            #{appId}, #{channelType}, #{alertType}, #{alertMessage}, #{alertTime},
+            <if test="extJson != null and extJson != ''">#{extJson},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
 
 </mapper>

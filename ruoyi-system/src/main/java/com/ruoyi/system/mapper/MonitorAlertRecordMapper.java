@@ -16,4 +16,6 @@ public interface MonitorAlertRecordMapper
      * @return 告警记录列表
      */
     List<MonitorAlertRecord> selectMonitorAlertRecordList(MonitorAlertRecord alertRecord);
+
+    int insertMonitorAlertRecord(MonitorAlertRecord alertRecord);
 }

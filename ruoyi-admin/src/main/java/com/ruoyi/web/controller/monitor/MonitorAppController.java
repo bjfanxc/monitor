@@ -8,7 +8,9 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.system.domain.MonitorApp;
 import com.ruoyi.system.domain.dto.MonitorAppStatusDto;
+import com.ruoyi.system.domain.vo.MonitorAppScanResultVo;
 import com.ruoyi.system.service.IMonitorAppService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -18,11 +20,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 应用监控管理
@@ -34,9 +39,6 @@ public class MonitorAppController extends BaseController
     @Autowired
     private IMonitorAppService monitorAppService;
 
-    /**
-     * 获取应用监控概览
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:list')")
     @GetMapping("/overview")
     public AjaxResult overview()
@@ -44,9 +46,6 @@ public class MonitorAppController extends BaseController
         return success(monitorAppService.selectMonitorAppOverview());
     }
 
-    /**
-     * 获取应用监控列表
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:list')")
     @GetMapping("/list")
     public TableDataInfo list(MonitorApp monitorApp)
@@ -56,9 +55,6 @@ public class MonitorAppController extends BaseController
         return getDataTable(list);
     }
 
-    /**
-     * 新增应用监控
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:add')")
     @Log(title = "应用监控", businessType = BusinessType.INSERT)
     @PostMapping
@@ -68,9 +64,6 @@ public class MonitorAppController extends BaseController
         return toAjax(monitorAppService.insertMonitorApp(monitorApp));
     }
 
-    /**
-     * 修改应用监控
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:edit')")
     @Log(title = "应用监控", businessType = BusinessType.UPDATE)
     @PutMapping
@@ -80,9 +73,6 @@ public class MonitorAppController extends BaseController
         return toAjax(monitorAppService.updateMonitorApp(monitorApp));
     }
 
-    /**
-     * 导入应用监控数据
-     */
     @Log(title = "应用监控", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('monitor:app:import')")
     @PostMapping("/importData")
@@ -94,9 +84,6 @@ public class MonitorAppController extends BaseController
         return success(message);
     }
 
-    /**
-     * 下载导入模板
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:import')")
     @PostMapping("/importTemplate")
     public void importTemplate(HttpServletResponse response)
@@ -105,9 +92,6 @@ public class MonitorAppController extends BaseController
         util.importTemplateExcel(response, "应用监控导入模板");
     }
 
-    /**
-     * 删除应用监控
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:remove')")
     @Log(title = "应用监控", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
@@ -116,14 +100,34 @@ public class MonitorAppController extends BaseController
         return toAjax(monitorAppService.deleteMonitorAppById(id));
     }
 
-    /**
-     * 修改应用状态
-     */
     @PreAuthorize("@ss.hasPermi('monitor:app:status')")
     @Log(title = "应用监控", businessType = BusinessType.UPDATE)
     @PutMapping("/status")
     public AjaxResult changeStatus(@Validated @RequestBody MonitorAppStatusDto statusDto)
     {
         return toAjax(monitorAppService.updateMonitorAppStatus(statusDto, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasPermi('monitor:app:status')")
+    @Log(title = "应用监控", businessType = BusinessType.UPDATE)
+    @PutMapping("/scan/{id}")
+    public AjaxResult scan(@PathVariable Long id, @RequestParam(value = "mode", required = false) String mode)
+    {
+        return success(monitorAppService.scanGooglePlayApp(id, getUsername(), mode));
+    }
+
+    @PreAuthorize("@ss.hasPermi('monitor:app:status')")
+    @Log(title = "应用监控", businessType = BusinessType.UPDATE)
+    @PutMapping("/scanAll")
+    public AjaxResult scanAll(@RequestParam(value = "mode", required = false) String mode)
+    {
+        List<MonitorAppScanResultVo> results = monitorAppService.scanGooglePlayApps(getUsername(), mode);
+        long changedCount = results.stream().filter(MonitorAppScanResultVo::isChanged).count();
+        Map<String, Object> data = new HashMap<>(3);
+        data.put("total", results.size());
+        data.put("changed", changedCount);
+        data.put("mode", mode);
+        data.put("results", results);
+        return success(data);
     }
 }
