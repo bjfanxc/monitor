@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.WaitUntilState;
+import com.ruoyi.common.core.domain.entity.SysDictData;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -19,6 +20,7 @@ import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.mapper.MonitorAlertRecordMapper;
 import com.ruoyi.system.mapper.MonitorAppMapper;
 import com.ruoyi.system.service.IMonitorAppService;
+import com.ruoyi.system.service.ISysDictDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * App monitor service implementation.
@@ -68,6 +72,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     @Autowired
     private MonitorAlertChannelMapper monitorAlertChannelMapper;
 
+    @Autowired
+    private ISysDictDataService sysDictDataService;
+
     @Override
     public MonitorAppOverviewVo selectMonitorAppOverview()
     {
@@ -83,6 +90,16 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     }
 
     @Override
+    public Map<String, Object> selectMonitorAppFormOptions()
+    {
+        Map<String, Object> result = new LinkedHashMap<>(3);
+        result.put("storePlatforms", buildStorePlatformOptions());
+        result.put("regions", buildRegionOptions());
+        result.put("ownerTypes", buildOwnerTypeOptions());
+        return result;
+    }
+
+    @Override
     public List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp)
     {
         applyDataPermission(monitorApp);
@@ -93,6 +110,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     public int insertMonitorApp(MonitorApp monitorApp)
     {
         normalizeMonitorApp(monitorApp);
+        validateOwnerType(monitorApp, monitorApp.getCreateBy());
         checkMonitorAppUnique(monitorApp);
         return monitorAppMapper.insertMonitorApp(monitorApp);
     }
@@ -104,8 +122,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             throw new ServiceException("App ID cannot be null");
         }
+        MonitorApp exists = ensureMonitorAppExists(monitorApp.getId());
         normalizeMonitorApp(monitorApp);
-        ensureMonitorAppExists(monitorApp.getId());
+        validateOwnerType(monitorApp, exists.getCreateBy());
         checkMonitorAppUnique(monitorApp);
         return monitorAppMapper.updateMonitorApp(monitorApp);
     }
@@ -380,11 +399,11 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             detailUrl,
             detailMessage);
 
-        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(monitorApp.getCreateBy());
+        List<MonitorAlertChannel> channels = resolveAlertChannels(monitorApp);
         if (channels == null || channels.isEmpty())
         {
             insertAlertRecord(monitorApp, ALERT_CHANNEL_SYSTEM, alertType, content,
-                buildExtJson(detailUrl, true, "No enabled Telegram channel configured"), alertTime);
+                buildExtJson(detailUrl, true, "No matched enabled Telegram channel configured"), alertTime);
             return false;
         }
 
@@ -397,6 +416,30 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             anyNotified = anyNotified || sendResult.isSuccess();
         }
         return anyNotified;
+    }
+
+    private List<MonitorAlertChannel> resolveAlertChannels(MonitorApp monitorApp)
+    {
+        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(monitorApp.getCreateBy());
+        if (channels == null || channels.isEmpty())
+        {
+            return channels;
+        }
+        String ownerType = StringUtils.trim(monitorApp.getOwnerType());
+        if (StringUtils.isBlank(ownerType) || StringUtils.equalsIgnoreCase(ownerType, SYSTEM_OPERATOR))
+        {
+            return channels;
+        }
+        List<MonitorAlertChannel> matched = new ArrayList<>();
+        for (MonitorAlertChannel channel : channels)
+        {
+            if (StringUtils.equals(ownerType, String.valueOf(channel.getId()))
+                || StringUtils.equals(ownerType, channel.getName()))
+            {
+                matched.add(channel);
+            }
+        }
+        return matched;
     }
 
     private void insertAlertRecord(MonitorApp monitorApp, String channelType, String alertType, String message, String extJson, Date alertTime)
@@ -542,7 +585,110 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         monitorApp.setBundleId(StringUtils.trim(monitorApp.getBundleId()));
         monitorApp.setStorePlatform(StringUtils.trim(monitorApp.getStorePlatform()));
         monitorApp.setRegion(StringUtils.trim(monitorApp.getRegion()));
+        if (StringUtils.isNotBlank(monitorApp.getRegion()))
+        {
+            monitorApp.setRegion(monitorApp.getRegion().toUpperCase());
+        }
         monitorApp.setOwnerType(StringUtils.trim(monitorApp.getOwnerType()));
+    }
+
+    private void validateOwnerType(MonitorApp monitorApp, String createBy)
+    {
+        if (monitorApp == null || StringUtils.isBlank(monitorApp.getOwnerType()))
+        {
+            throw new ServiceException("Owner type cannot be empty");
+        }
+        String ownerType = StringUtils.trim(monitorApp.getOwnerType());
+        if (StringUtils.equalsIgnoreCase(ownerType, SYSTEM_OPERATOR))
+        {
+            return;
+        }
+        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(createBy);
+        if (channels == null || channels.isEmpty())
+        {
+            throw new ServiceException("No enabled Telegram channel available for the current user");
+        }
+        for (MonitorAlertChannel channel : channels)
+        {
+            if (StringUtils.equals(ownerType, String.valueOf(channel.getId()))
+                || StringUtils.equals(ownerType, channel.getName()))
+            {
+                monitorApp.setOwnerType(String.valueOf(channel.getId()));
+                return;
+            }
+        }
+        throw new ServiceException("Selected owner type is invalid or unavailable");
+    }
+
+    private List<Map<String, String>> buildStorePlatformOptions()
+    {
+        List<Map<String, String>> options = new ArrayList<>();
+        SysDictData query = new SysDictData();
+        query.setDictType("monitor_store_type");
+        query.setStatus("0");
+        List<SysDictData> dictDataList = sysDictDataService.selectDictDataList(query);
+        if (dictDataList == null)
+        {
+            return options;
+        }
+        for (SysDictData dictData : dictDataList)
+        {
+            options.add(buildOption(dictData.getDictLabel(), dictData.getDictValue()));
+        }
+        return options;
+    }
+
+    private List<Map<String, String>> buildRegionOptions()
+    {
+        Set<String> regions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        regions.add("CN");
+        regions.add("US");
+        MonitorApp query = buildDataPermissionQuery();
+        List<MonitorApp> apps = monitorAppMapper.selectMonitorAppList(query);
+        if (apps != null)
+        {
+            for (MonitorApp app : apps)
+            {
+                if (StringUtils.isNotBlank(app.getRegion()))
+                {
+                    regions.add(app.getRegion().trim().toUpperCase());
+                }
+            }
+        }
+        List<Map<String, String>> options = new ArrayList<>();
+        for (String region : regions)
+        {
+            options.add(buildOption(region, region));
+        }
+        return options;
+    }
+
+    private List<Map<String, String>> buildOwnerTypeOptions()
+    {
+        List<Map<String, String>> options = new ArrayList<>();
+        String username = SecurityUtils.getUsername();
+        if (StringUtils.isBlank(username))
+        {
+            return options;
+        }
+        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(username);
+        if (channels == null)
+        {
+            return options;
+        }
+        for (MonitorAlertChannel channel : channels)
+        {
+            options.add(buildOption(channel.getName(), String.valueOf(channel.getId())));
+        }
+        return options;
+    }
+
+    private Map<String, String> buildOption(String label, String value)
+    {
+        Map<String, String> option = new LinkedHashMap<>(2);
+        option.put("label", label);
+        option.put("value", value);
+        return option;
     }
 
     private void checkMonitorAppUnique(MonitorApp monitorApp)

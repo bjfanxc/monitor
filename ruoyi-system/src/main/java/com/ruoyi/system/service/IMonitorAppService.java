@@ -6,6 +6,7 @@ import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
 import com.ruoyi.system.domain.vo.MonitorAppScanResultVo;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 应用监控服务接口
@@ -18,6 +19,8 @@ public interface IMonitorAppService
      * @return 应用概览
      */
     MonitorAppOverviewVo selectMonitorAppOverview();
+
+    Map<String, Object> selectMonitorAppFormOptions();
 
     /**
      * 获取应用监控列表

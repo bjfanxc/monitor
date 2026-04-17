@@ -47,6 +47,13 @@ public class MonitorAppController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('monitor:app:list')")
+    @GetMapping("/options")
+    public AjaxResult options()
+    {
+        return success(monitorAppService.selectMonitorAppFormOptions());
+    }
+
+    @PreAuthorize("@ss.hasPermi('monitor:app:list')")
     @GetMapping("/list")
     public TableDataInfo list(MonitorApp monitorApp)
     {

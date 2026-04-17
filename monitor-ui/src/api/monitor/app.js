@@ -15,6 +15,13 @@ export function listApp(query) {
   })
 }
 
+export function getAppFormOptions() {
+  return request({
+    url: "/monitor/app/options",
+    method: "get"
+  })
+}
+
 export function addApp(data) {
   return request({
     url: "/monitor/app",

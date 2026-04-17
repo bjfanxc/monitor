@@ -21,11 +21,11 @@
       </el-col>
     </el-row>
 
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="68px">
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
-          placeholder="请输入产品名、应用名或包名"
+          placeholder="请输入产品名称、应用名称或包名"
           clearable
           style="width: 260px"
           @keyup.enter.native="handleQuery"
@@ -123,9 +123,17 @@
       <el-table-column label="产品名称" align="center" prop="productName" :show-overflow-tooltip="true" min-width="140" />
       <el-table-column label="应用名称" align="center" prop="appName" :show-overflow-tooltip="true" min-width="140" />
       <el-table-column label="包名 / Bundle ID" align="center" prop="bundleId" :show-overflow-tooltip="true" min-width="220" />
-      <el-table-column label="平台" align="center" prop="storePlatform" width="120" />
+      <el-table-column label="平台" align="center" prop="storePlatform" width="120">
+        <template slot-scope="scope">
+          <span>{{ storePlatformLabel(scope.row.storePlatform) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="地区" align="center" prop="region" width="100" />
-      <el-table-column label="所属类型" align="center" prop="ownerType" width="110" />
+      <el-table-column label="所属类型" align="center" prop="ownerType" width="150">
+        <template slot-scope="scope">
+          <span>{{ ownerTypeLabel(scope.row.ownerType) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" align="center" width="110">
         <template slot-scope="scope">
           <el-switch
@@ -191,17 +199,45 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="商店平台" prop="storePlatform">
-              <el-input v-model="form.storePlatform" placeholder="例如 iOS / Android" />
+              <el-select v-model="form.storePlatform" placeholder="请选择商店平台" style="width: 100%">
+                <el-option
+                  v-for="item in storePlatformOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="地区" prop="region">
-              <el-input v-model="form.region" placeholder="例如 CN / US" />
+              <el-select
+                v-model="form.region"
+                placeholder="请选择地区"
+                filterable
+                allow-create
+                default-first-option
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in regionOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="所属类型" prop="ownerType">
-              <el-input v-model="form.ownerType" placeholder="例如 system / business" />
+              <el-select v-model="form.ownerType" placeholder="请选择所属类型" style="width: 100%">
+                <el-option
+                  v-for="item in ownerTypeOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -220,8 +256,8 @@
         </el-row>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+        <el-button @click="cancel">取消</el-button>
       </div>
     </el-dialog>
 
@@ -241,13 +277,13 @@
         <i class="el-icon-upload"></i>
         <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
         <div slot="tip" class="el-upload__tip">
-          仅支持 xls、xlsx 文件。
+          仅支持 xls、xlsx 文件
           <el-checkbox v-model="upload.updateSupport" style="margin-left: 8px">更新已存在数据</el-checkbox>
         </div>
       </el-upload>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitFileForm">确 定</el-button>
-        <el-button @click="importOpen = false">取 消</el-button>
+        <el-button type="primary" @click="submitFileForm">确定</el-button>
+        <el-button @click="importOpen = false">取消</el-button>
       </div>
     </el-dialog>
   </div>
@@ -255,10 +291,11 @@
 
 <script>
 import { getToken } from "@/utils/auth"
-import { addApp, changeAppStatus, delApp, getAppOverview, listApp, updateApp } from "@/api/monitor/app"
+import { addApp, changeAppStatus, delApp, getAppFormOptions, getAppOverview, listApp, updateApp } from "@/api/monitor/app"
 
 export default {
   name: "MonitorApp",
+  dicts: ["monitor_store_type", "monitor_area_type"],
   data() {
     return {
       loading: false,
@@ -271,6 +308,7 @@ export default {
       open: false,
       importOpen: false,
       title: "",
+      ownerTypeOptions: [],
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -289,18 +327,68 @@ export default {
       rules: {
         productName: [{ required: true, message: "产品名称不能为空", trigger: "blur" }],
         appName: [{ required: true, message: "应用名称不能为空", trigger: "blur" }],
-        bundleId: [{ required: true, message: "包名 / Bundle ID不能为空", trigger: "blur" }],
-        storePlatform: [{ required: true, message: "商店平台不能为空", trigger: "blur" }],
-        region: [{ required: true, message: "地区不能为空", trigger: "blur" }],
-        ownerType: [{ required: true, message: "所属类型不能为空", trigger: "blur" }]
+        bundleId: [{ required: true, message: "包名 / Bundle ID 不能为空", trigger: "blur" }],
+        storePlatform: [{ required: true, message: "商店平台不能为空", trigger: "change" }],
+        region: [{ required: true, message: "地区不能为空", trigger: "change" }],
+        ownerType: [{ required: true, message: "所属类型不能为空", trigger: "change" }]
       }
     }
   },
+  computed: {
+    storePlatformOptions() {
+      return (this.dict.type.monitor_store_type || []).map(item => ({
+        label: item.label,
+        value: item.value
+      }))
+    },
+    regionOptions() {
+      return (this.dict.type.monitor_area_type || []).map(item => ({
+        label: item.label,
+        value: item.value
+      }))
+    }
+  },
   created() {
+    this.getFormOptions()
     this.getOverview()
     this.getList()
   },
   methods: {
+    getFormOptions() {
+      getAppFormOptions().then(response => {
+        const data = response.data || {}
+        this.ownerTypeOptions = this.normalizeOptions(data.ownerTypes)
+      }).catch(() => {
+        this.ownerTypeOptions = []
+      })
+    },
+    normalizeOptions(options, fallback = []) {
+      const list = Array.isArray(options) ? options : fallback
+      return list
+        .filter(item => item && item.value !== undefined && item.value !== null && item.value !== "")
+        .map(item => ({
+          label: item.label,
+          value: String(item.value)
+        }))
+    },
+    ensureOptionExists(list, value) {
+      if (value === undefined || value === null || value === "") {
+        return list
+      }
+      const normalizedValue = String(value)
+      if (list.some(item => item.value === normalizedValue)) {
+        return list
+      }
+      return [...list, { label: normalizedValue, value: normalizedValue }]
+    },
+    storePlatformLabel(value) {
+      const target = (this.dict.type.monitor_store_type || []).find(item => item.value === value)
+      return target ? target.label : value
+    },
+    ownerTypeLabel(value) {
+      const target = this.ownerTypeOptions.find(item => item.value === String(value))
+      return target ? target.label : value
+    },
     getOverview() {
       getAppOverview().then(response => {
         this.overview = response.data || {}
@@ -309,8 +397,8 @@ export default {
     getList() {
       this.loading = true
       listApp(this.queryParams).then(response => {
-        this.appList = response.rows
-        this.total = response.total
+        this.appList = response.rows || []
+        this.total = response.total || 0
         this.loading = false
       }).catch(() => {
         this.loading = false
@@ -324,7 +412,7 @@ export default {
         bundleId: undefined,
         storePlatform: undefined,
         region: undefined,
-        ownerType: "system",
+        ownerType: undefined,
         status: 1,
         remark: undefined
       }
@@ -344,13 +432,20 @@ export default {
     },
     handleAdd() {
       this.reset()
+      if (this.ownerTypeOptions.length === 1) {
+        this.form.ownerType = this.ownerTypeOptions[0].value
+      }
       this.open = true
       this.title = "新增应用"
     },
     handleUpdate(row) {
       this.reset()
       const current = row || this.appList.find(item => item.id === this.ids[0])
-      this.form = { ...current }
+      this.form = {
+        ...current,
+        ownerType: current && current.ownerType !== undefined && current.ownerType !== null ? String(current.ownerType) : current.ownerType
+      }
+      this.ownerTypeOptions = this.ensureOptionExists(this.ownerTypeOptions, this.form.ownerType)
       this.open = true
       this.title = "修改应用"
     },
@@ -363,10 +458,16 @@ export default {
         if (!valid) {
           return
         }
-        const request = this.form.id ? updateApp(this.form) : addApp(this.form)
+        const payload = {
+          ...this.form,
+          region: this.form.region ? String(this.form.region).toUpperCase() : this.form.region,
+          ownerType: this.form.ownerType ? String(this.form.ownerType) : this.form.ownerType
+        }
+        const request = payload.id ? updateApp(payload) : addApp(payload)
         request.then(() => {
-          this.$modal.msgSuccess(this.form.id ? "修改成功" : "新增成功")
+          this.$modal.msgSuccess(payload.id ? "修改成功" : "新增成功")
           this.open = false
+          this.getFormOptions()
           this.getOverview()
           this.getList()
         })
