@@ -167,7 +167,12 @@ aside {
   }
 
   > .el-table {
-    padding-top: 2px;
+    margin-top: 14px;
+    background: #ffffff;
+    border: 1px solid rgba(219, 228, 239, 0.95);
+    border-radius: 18px;
+    box-shadow: var(--panel-shadow-soft);
+    overflow: hidden;
   }
 }
 
@@ -239,11 +244,25 @@ aside {
 
 .el-table {
   border: 1px solid rgba(219, 228, 239, 0.95);
+
+  &::before {
+    display: none;
+  }
 }
 
 .el-table__body-wrapper,
 .el-table__header-wrapper {
   background: #ffffff;
+}
+
+.el-table__empty-block {
+  min-height: 180px;
+  background: linear-gradient(180deg, rgba(251, 253, 255, 0.96) 0%, rgba(245, 248, 252, 0.96) 100%);
+}
+
+.el-table__empty-text {
+  color: #8a99ad;
+  font-size: 14px;
 }
 
 .el-pagination.is-background .btn-next,

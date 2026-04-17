@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div class="app-container monitor-app-page">
     <el-row :gutter="16" class="overview-row">
       <el-col :xs="24" :sm="8">
         <el-card shadow="hover" class="overview-card">
@@ -21,13 +21,13 @@
       </el-col>
     </el-row>
 
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="68px">
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
           placeholder="请输入产品名称、应用名称或包名"
           clearable
-          style="width: 260px"
+          style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -36,7 +36,7 @@
           v-model="queryParams.storePlatform"
           placeholder="请输入商店平台"
           clearable
-          style="width: 180px"
+          style="width: 220px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -45,12 +45,12 @@
           v-model="queryParams.region"
           placeholder="请输入地区"
           clearable
-          style="width: 160px"
+          style="width: 210px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 140px">
+        <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 180px">
           <el-option label="上架" :value="1" />
           <el-option label="下架" :value="0" />
         </el-select>
@@ -59,6 +59,7 @@
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
       </el-form-item>
+
       <div class="query-toolbar">
         <div class="query-toolbar__actions">
           <el-button
@@ -68,7 +69,7 @@
             size="mini"
             @click="handleAdd"
             v-hasPermi="['monitor:app:add']"
-          >鏂板</el-button>
+          >新增</el-button>
           <el-button
             type="success"
             plain
@@ -77,7 +78,7 @@
             :disabled="single"
             @click="handleUpdate"
             v-hasPermi="['monitor:app:edit']"
-          >淇敼</el-button>
+          >修改</el-button>
           <el-button
             type="danger"
             plain
@@ -86,7 +87,7 @@
             :disabled="single"
             @click="handleDelete"
             v-hasPermi="['monitor:app:remove']"
-          >鍒犻櫎</el-button>
+          >删除</el-button>
           <el-button
             type="warning"
             plain
@@ -94,7 +95,7 @@
             size="mini"
             @click="openImportDialog"
             v-hasPermi="['monitor:app:import']"
-          >瀵煎叆</el-button>
+          >导入</el-button>
           <el-button
             type="info"
             plain
@@ -102,67 +103,11 @@
             size="mini"
             @click="handleDownloadTemplate"
             v-hasPermi="['monitor:app:import']"
-          >妯℃澘</el-button>
+          >模板</el-button>
         </div>
         <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
       </div>
     </el-form>
-
-    <el-row v-if="false" :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="el-icon-plus"
-          size="mini"
-          @click="handleAdd"
-          v-hasPermi="['monitor:app:add']"
-        >新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['monitor:app:edit']"
-        >修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="single"
-          @click="handleDelete"
-          v-hasPermi="['monitor:app:remove']"
-        >删除</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="warning"
-          plain
-          icon="el-icon-upload2"
-          size="mini"
-          @click="openImportDialog"
-          v-hasPermi="['monitor:app:import']"
-        >导入</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="info"
-          plain
-          icon="el-icon-download"
-          size="mini"
-          @click="handleDownloadTemplate"
-          v-hasPermi="['monitor:app:import']"
-        >模板</el-button>
-      </el-col>
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
-    </el-row>
 
     <el-table v-loading="loading" :data="appList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
@@ -192,12 +137,12 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="最近扫描时间" align="center" prop="lastScanTime" width="160">
+      <el-table-column label="最近扫描时间" align="center" prop="lastScanTime" width="170">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.lastScanTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" min-width="160" />
+      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" min-width="180" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="180">
         <template slot-scope="scope">
           <el-button
@@ -226,7 +171,7 @@
       @pagination="getList"
     />
 
-    <el-dialog :title="title" :visible.sync="open" width="680px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="760px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="110px">
         <el-row :gutter="16">
           <el-col :span="12">
@@ -258,14 +203,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="地区" prop="region">
-              <el-select
-                v-model="form.region"
-                placeholder="请选择地区"
-                filterable
-                allow-create
-                default-first-option
-                style="width: 100%"
-              >
+              <el-select v-model="form.region" placeholder="请选择地区" style="width: 100%">
                 <el-option
                   v-for="item in regionOptions"
                   :key="item.value"
@@ -297,7 +235,7 @@
           </el-col>
           <el-col :span="24">
             <el-form-item label="备注" prop="remark">
-              <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
+              <el-input v-model="form.remark" type="textarea" :rows="4" placeholder="请输入备注" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -409,8 +347,8 @@ export default {
         this.ownerTypeOptions = []
       })
     },
-    normalizeOptions(options, fallback = []) {
-      const list = Array.isArray(options) ? options : fallback
+    normalizeOptions(options) {
+      const list = Array.isArray(options) ? options : []
       return list
         .filter(item => item && item.value !== undefined && item.value !== null && item.value !== "")
         .map(item => ({

@@ -32,11 +32,12 @@
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
       </el-form-item>
-    </el-form>
 
-    <el-row :gutter="10" class="mb8">
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
-    </el-row>
+      <div class="query-toolbar">
+        <div class="query-toolbar__summary">告警记录列表</div>
+        <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
+      </div>
+    </el-form>
 
     <el-table v-loading="loading" :data="alertList">
       <el-table-column label="ID" align="center" prop="id" width="80" />
@@ -117,6 +118,23 @@ export default {
 </script>
 
 <style scoped>
+.query-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.query-toolbar__summary {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .ext-json {
   display: inline-block;
   white-space: pre-wrap;
