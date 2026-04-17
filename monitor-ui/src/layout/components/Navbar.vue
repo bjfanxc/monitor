@@ -135,29 +135,36 @@ export default {
 }
 
 .navbar {
-  height: 50px;
+  height: 64px;
   overflow: hidden;
   position: relative;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,21,41,.08);
+  margin: 0;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(219, 228, 239, 0.95);
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
   display: flex;
   align-items: center;
-  // padding: 0 8px;
   box-sizing: border-box;
 
   .hamburger-container {
     line-height: 46px;
-    height: 100%;
+    height: 46px;
+    width: 46px;
     cursor: pointer;
-    transition: background .3s;
-    -webkit-tap-highlight-color:transparent;
+    transition: background .3s, transform .3s;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    margin-right: 8px;
+    margin-right: 10px;
+    border-radius: 10px;
 
     &:hover {
-      background: rgba(0, 0, 0, .025)
+      background: rgba(43, 108, 176, 0.08);
+      transform: none;
     }
   }
 
@@ -167,7 +174,7 @@ export default {
 
   .topmenu-container {
     position: absolute;
-    left: 50px;
+    left: 62px;
   }
 
   .topbar-container {
@@ -181,64 +188,70 @@ export default {
 
   .right-menu {
     height: 100%;
-    line-height: 50px;
     display: flex;
     align-items: center;
     margin-left: auto;
+    gap: 4px;
 
     &:focus {
       outline: none;
     }
 
     .right-menu-item {
-      display: inline-block;
-      padding: 0 8px;
-      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      height: 44px;
+      min-width: 44px;
       font-size: 18px;
-      color: #5a5e66;
-      vertical-align: text-bottom;
+      color: #506176;
+      border-radius: 10px;
+      vertical-align: middle;
 
       &.hover-effect {
         cursor: pointer;
-        transition: background .3s;
+        transition: background .3s, color .3s, transform .3s;
 
         &:hover {
-          background: rgba(0, 0, 0, .025)
+          background: rgba(43, 108, 176, 0.08);
+          color: #1f4f86;
+          transform: none;
         }
       }
     }
 
     .avatar-container {
-      margin-right: 0px;
-      padding-right: 0px;
+      margin-right: 0;
+      padding-right: 6px;
 
       .avatar-wrapper {
-        margin-top: 10px;
-        right: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 10px;
         position: relative;
+      }
 
-        .user-avatar {
-          cursor: pointer;
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-        }
+      .user-avatar {
+        cursor: pointer;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 2px solid rgba(43, 108, 176, 0.18);
+        box-shadow: none;
+      }
 
-        .user-nickname{
-          position: relative;
-          bottom: 10px;
-          left: 2px;
-          font-size: 14px;
-          font-weight: bold;
-        }
+      .user-nickname {
+        font-size: 14px;
+        font-weight: 700;
+        color: #122138;
+      }
 
-        .el-icon-caret-bottom {
-          cursor: pointer;
-          position: absolute;
-          right: -20px;
-          top: 25px;
-          font-size: 12px;
-        }
+      .el-icon-caret-bottom {
+        cursor: pointer;
+        font-size: 12px;
       }
     }
   }

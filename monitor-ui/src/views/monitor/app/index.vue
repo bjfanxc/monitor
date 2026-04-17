@@ -59,9 +59,56 @@
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
       </el-form-item>
+      <div class="query-toolbar">
+        <div class="query-toolbar__actions">
+          <el-button
+            type="primary"
+            plain
+            icon="el-icon-plus"
+            size="mini"
+            @click="handleAdd"
+            v-hasPermi="['monitor:app:add']"
+          >鏂板</el-button>
+          <el-button
+            type="success"
+            plain
+            icon="el-icon-edit"
+            size="mini"
+            :disabled="single"
+            @click="handleUpdate"
+            v-hasPermi="['monitor:app:edit']"
+          >淇敼</el-button>
+          <el-button
+            type="danger"
+            plain
+            icon="el-icon-delete"
+            size="mini"
+            :disabled="single"
+            @click="handleDelete"
+            v-hasPermi="['monitor:app:remove']"
+          >鍒犻櫎</el-button>
+          <el-button
+            type="warning"
+            plain
+            icon="el-icon-upload2"
+            size="mini"
+            @click="openImportDialog"
+            v-hasPermi="['monitor:app:import']"
+          >瀵煎叆</el-button>
+          <el-button
+            type="info"
+            plain
+            icon="el-icon-download"
+            size="mini"
+            @click="handleDownloadTemplate"
+            v-hasPermi="['monitor:app:import']"
+          >妯℃澘</el-button>
+        </div>
+        <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
+      </div>
     </el-form>
 
-    <el-row :gutter="10" class="mb8">
+    <el-row v-if="false" :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button
           type="primary"
@@ -556,5 +603,23 @@ export default {
   font-size: 30px;
   font-weight: 600;
   color: #303133;
+}
+
+.query-toolbar {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(219, 228, 239, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.query-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 </style>

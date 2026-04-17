@@ -39,7 +39,6 @@ export default {
         return [10, 20, 30, 50]
       }
     },
-    // 移动端页码按钮的数量端默认值5
     pagerCount: {
       type: Number,
       default: document.body.clientWidth < 992 ? 5 : 7
@@ -59,10 +58,6 @@ export default {
     hidden: {
       type: Boolean,
       default: false
-    }
-  },
-  data() {
-    return {
     }
   },
   computed: {
@@ -105,8 +100,13 @@ export default {
 
 <style scoped>
 .pagination-container {
-  background: #fff;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 0 0;
+  background: transparent;
 }
+
 .pagination-container.hidden {
   display: none;
 }

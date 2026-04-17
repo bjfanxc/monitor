@@ -5,12 +5,33 @@
 @import './sidebar.scss';
 @import './btn.scss';
 
+:root {
+  --page-bg: #f6f8fc;
+  --page-bg-accent: linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+  --panel-bg: rgba(255, 255, 255, 0.92);
+  --panel-border: rgba(162, 177, 198, 0.22);
+  --panel-shadow: 0 10px 26px rgba(15, 23, 34, 0.06);
+  --panel-shadow-soft: 0 6px 18px rgba(15, 23, 34, 0.04);
+  --text-strong: #122138;
+  --text-main: #334155;
+  --text-muted: #6b7a90;
+  --brand: #2b6cb0;
+  --brand-soft: rgba(43, 108, 176, 0.12);
+  --success-soft: rgba(38, 153, 123, 0.12);
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
 body {
   height: 100%;
+  margin: 0;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+  color: var(--text-main);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: var(--page-bg);
 }
 
 label {
@@ -20,10 +41,12 @@ label {
 html {
   height: 100%;
   box-sizing: border-box;
+  background: var(--page-bg);
 }
 
 #app {
   height: 100%;
+  background: var(--page-bg-accent);
 }
 
 *,
@@ -97,31 +120,55 @@ div:focus {
 }
 
 aside {
-  background: #eef1f6;
-  padding: 8px 24px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 10px 18px;
   margin-bottom: 20px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-border);
   display: block;
   line-height: 32px;
-  font-size: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  color: #2c3e50;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  color: var(--text-main);
 
   a {
-    color: #337ab7;
-    cursor: pointer;
+    color: var(--brand);
 
     &:hover {
-      color: rgb(32, 160, 255);
+      color: #1e4f87;
     }
   }
 }
 
-//main-container全局样式
 .app-container {
-  padding: 20px;
+  padding: 20px 22px 24px;
+
+  > .el-form {
+    margin-bottom: 14px;
+    padding: 18px 18px 4px;
+    background: #ffffff;
+    border: 1px solid rgba(219, 228, 239, 0.95);
+    border-radius: 14px;
+    box-shadow: var(--panel-shadow-soft);
+  }
+
+  > .mb8 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 14px !important;
+    padding: 0;
+  }
+
+  > .mb8 .el-col {
+    width: auto !important;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
+  > .el-table {
+    padding-top: 2px;
+  }
 }
 
 .components-container {
@@ -134,24 +181,23 @@ aside {
 }
 
 .sub-navbar {
-  height: 50px;
-  line-height: 50px;
+  height: 54px;
+  line-height: 54px;
   position: relative;
   width: 100%;
   text-align: right;
   padding-right: 20px;
   transition: 600ms ease position;
-  background: linear-gradient(90deg, rgba(32, 182, 249, 1) 0%, rgba(32, 182, 249, 1) 0%, rgba(33, 120, 241, 1) 100%, rgba(33, 120, 241, 1) 100%);
+  background: linear-gradient(90deg, #2b6cb0 0%, #3f87d6 100%);
+  border-radius: 14px;
+  box-shadow: var(--panel-shadow-soft);
 
   .subtitle {
     font-size: 20px;
     color: #fff;
   }
 
-  &.draft {
-    background: #d0d0d0;
-  }
-
+  &.draft,
   &.deleted {
     background: #d0d0d0;
   }
@@ -159,11 +205,11 @@ aside {
 
 .link-type,
 .link-type:focus {
-  color: #337ab7;
+  color: var(--brand);
   cursor: pointer;
 
   &:hover {
-    color: rgb(32, 160, 255);
+    color: #1e4f87;
   }
 }
 
@@ -175,4 +221,45 @@ aside {
     vertical-align: middle;
     margin-bottom: 10px;
   }
+}
+
+.el-card {
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--panel-shadow-soft);
+}
+
+.el-table,
+.el-dialog,
+.el-dropdown-menu,
+.el-picker-panel,
+.el-popover {
+  border-radius: var(--radius-md);
+}
+
+.el-table {
+  border: 1px solid rgba(219, 228, 239, 0.95);
+}
+
+.el-table__body-wrapper,
+.el-table__header-wrapper {
+  background: #ffffff;
+}
+
+.el-pagination.is-background .btn-next,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .el-pager li {
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(219, 228, 239, 0.95);
+  color: #607086;
+}
+
+.el-pagination.is-background .el-pager li:not(.disabled).active {
+  background: #2b6cb0;
+  border-color: #2b6cb0;
+  color: #fff;
 }

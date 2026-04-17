@@ -1,8 +1,8 @@
 <template>
   <div
-    class="sidebar-logo-container"
+  class="sidebar-logo-container"
     :class="{ collapse }"
-    :style="{ backgroundColor: sideTheme === 'theme-dark' && navType !== 3 ? variables.menuBackground : variables.menuLightBackground }"
+    :style="{ backgroundColor: variables.menuLightBackground }"
   >
     <transition name="sidebarLogoFade">
       <router-link v-if="collapse" key="collapse" class="sidebar-logo-link is-collapse" to="/">
@@ -13,7 +13,7 @@
         <div class="sidebar-brand">
           <h1
             class="sidebar-title"
-            :style="{ color: sideTheme === 'theme-dark' && navType !== 3 ? variables.logoTitleColor : variables.logoLightTitleColor }"
+            :style="{ color: variables.logoLightTitleColor }"
           >
             {{ title }}
           </h1>
@@ -68,10 +68,10 @@ export default {
 
 .sidebar-logo-container {
   position: relative;
-  height: 64px;
-  background: #1a1f2e;
+  height: 76px;
+  background: #f7fafe;
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(219, 228, 239, 0.95);
 
   .sidebar-logo-link {
     display: flex !important;
@@ -80,7 +80,7 @@ export default {
     flex-wrap: nowrap;
     height: 100%;
     width: 100%;
-    padding: 0 22px;
+    padding: 0 20px;
     text-decoration: none;
   }
 
@@ -90,10 +90,11 @@ export default {
   }
 
   .sidebar-logo {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     flex: 0 0 auto;
     display: block;
+    filter: none;
   }
 
   .sidebar-brand {
@@ -101,33 +102,33 @@ export default {
     flex-direction: column;
     justify-content: center;
     min-width: 0;
-    margin-left: 12px;
+    margin-left: 14px;
   }
 
   .sidebar-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 700;
     line-height: 1.1;
     letter-spacing: 0.04em;
-    color: #fff;
+    color: #122138;
     white-space: nowrap;
   }
 
   .sidebar-subtitle {
-    margin: 4px 0 0;
+    margin: 5px 0 0;
     font-size: 11px;
     line-height: 1;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.56);
+    color: rgba(77, 93, 115, 0.72);
     white-space: nowrap;
   }
 
   &.collapse {
     .sidebar-logo {
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
     }
   }
 }

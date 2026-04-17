@@ -46,11 +46,11 @@ export default {
 
 <style lang="scss" scoped>
 .app-main {
-  /* 50= navbar  50  */
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - 64px);
   width: 100%;
   position: relative;
   overflow: hidden;
+  background: #f6f8fc;
 
   &:fullscreen,
   &:-webkit-full-screen,
@@ -64,7 +64,7 @@ export default {
 .fixed-header + .app-main {
   overflow-y: auto;
   scrollbar-gutter: auto;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 64px);
   min-height: 0px;
 }
 
@@ -73,18 +73,17 @@ export default {
 }
 
 .fixed-header + .app-main {
-  margin-top: 50px;
+  margin-top: 64px;
 }
 
 .hasTagsView {
   .app-main {
-    /* 84 = navbar + tags-view = 50 + 34 */
-    min-height: calc(100vh - 84px);
+    min-height: calc(100vh - 104px);
   }
 
   .fixed-header + .app-main {
-    margin-top: 84px;
-    height: calc(100vh - 84px);
+    margin-top: 104px;
+    height: calc(100vh - 104px);
     min-height: 0px;
   }
 }
@@ -109,15 +108,15 @@ export default {
     .fixed-header + .app-main {
       padding-bottom: max(17px, calc(constant(safe-area-inset-bottom) + 10px));
       padding-bottom: max(17px, calc(env(safe-area-inset-bottom) + 10px));
-      height: calc(100svh - 50px);
-      height: calc(100dvh - 50px);
+      height: calc(100svh - 64px);
+      height: calc(100dvh - 64px);
     }
 
     .hasTagsView .fixed-header + .app-main {
       padding-bottom: max(17px, calc(constant(safe-area-inset-bottom) + 10px));
       padding-bottom: max(17px, calc(env(safe-area-inset-bottom) + 10px));
-      height: calc(100svh - 84px);
-      height: calc(100dvh - 84px);
+      height: calc(100svh - 104px);
+      height: calc(100dvh - 104px);
     }
   }
 }

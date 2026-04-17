@@ -392,20 +392,20 @@ export default {
 $tags-bar-height: 34px;
 
 .tags-view-container {
-  height: $tags-bar-height;
+  height: 40px;
   width: 100%;
   background: #fff;
-  border-bottom: 1px solid #d8dce5;
+  border-bottom: 1px solid rgba(219, 228, 239, 0.95);
   display: flex;
   align-items: center;
   overflow: hidden;
 
   $btn-width: 28px;
   $btn-color: #71717a;
-  $btn-hover-bg: #f0f2f5;
-  $btn-hover-color: #303133;
+  $btn-hover-bg: #f4f7fb;
+  $btn-hover-color: #1f4f86;
   $btn-disabled-color: #c0c4cc;
-  $divider: 1px solid #d8dce5;
+  $divider: 1px solid rgba(219, 228, 239, 0.95);
 
   .tags-nav-btn {
     flex-shrink: 0;
@@ -413,11 +413,12 @@ $tags-bar-height: 34px;
     align-items: center;
     justify-content: center;
     width: $btn-width;
-    height: $tags-bar-height;
+    height: 40px;
     cursor: pointer;
     color: $btn-color;
     font-size: 13px;
     user-select: none;
+    border-radius: 8px;
     transition: background 0.15s, color 0.15s;
 
     &:hover:not(.disabled) {
@@ -443,33 +444,33 @@ $tags-bar-height: 34px;
       display: inline-block;
       position: relative;
       cursor: pointer;
-      height: 26px;
-      line-height: 26px;
-      border: 1px solid #d8dce5;
-      color: #495060;
+      height: 28px;
+      line-height: 28px;
+      border: 1px solid rgba(219, 228, 239, 0.95);
+      color: #52637a;
       background: #fff;
-      padding: 0 8px;
+      padding: 0 10px;
       font-size: 12px;
-      margin-left: 5px;
-      border-radius: 3px;
+      margin-left: 6px;
+      border-radius: 8px;
 
       &:first-of-type { margin-left: 6px; }
       &:last-of-type  { margin-right: 15px; }
     }
   }
   &:not(.tags-view-container--chrome) .tags-view-wrapper .tags-view-item.active {
-    background-color: #42b983;
-    color: #fff;
-    border-color: #42b983;
+    background-color: rgba(43, 108, 176, 0.1);
+    color: #16508d;
+    border-color: rgba(43, 108, 176, 0.18);
     &::before {
       content: '';
-      background: #fff;
+      background: #2b6cb0;
       display: inline-block;
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       position: relative;
-      margin-right: 2px;
+      margin-right: 6px;
     }
   }
 
@@ -488,7 +489,7 @@ $tags-bar-height: 34px;
     align-items: center;
     justify-content: center;
     width: $btn-width;
-    height: $tags-bar-height;
+    height: 40px;
     cursor: pointer;
     color: $btn-color;
     font-size: 13px;
@@ -513,18 +514,18 @@ $tags-bar-height: 34px;
     position: fixed;
     list-style-type: none;
     padding: 5px 0;
-    border-radius: 4px;
+    border-radius: 10px;
     font-size: 12px;
     font-weight: 400;
     color: #333;
-    box-shadow: 2px 2px 3px 0 rgba(0, 0, 0, .3);
+    box-shadow: 0 10px 24px rgba(15, 23, 34, 0.12);
 
     li {
       margin: 0;
       padding: 7px 16px;
       cursor: pointer;
       &:hover {
-        background: #eee;
+        background: #f5f8fc;
       }
     }
   }

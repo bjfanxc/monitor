@@ -70,6 +70,7 @@ export default {
     position: relative;
     height: 100%;
     width: 100%;
+    background: transparent;
 
     &.mobile.openSidebar {
       position: fixed;
@@ -83,8 +84,7 @@ export default {
   }
 
   .drawer-bg {
-    background: #000;
-    opacity: 0.3;
+    background: rgba(8, 15, 27, 0.38);
     width: 100%;
     top: 0;
     height: 100%;
@@ -99,6 +99,7 @@ export default {
     z-index: 9;
     width: calc(100% - #{$base-sidebar-width});
     transition: width 0.28s;
+    background: transparent;
   }
 
   .hideSidebar .fixed-header {
