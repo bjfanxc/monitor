@@ -4,9 +4,9 @@
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
-          placeholder="请输入产品名、应用名或包名"
+          placeholder="请输入产品名称、应用名称或应用链接"
           clearable
-          style="width: 280px"
+          style="width: 320px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -42,10 +42,9 @@
     <el-table v-loading="loading" :data="alertList">
       <el-table-column label="ID" align="center" prop="id" width="80" />
       <el-table-column label="产品名称" align="center" prop="productName" min-width="140" :show-overflow-tooltip="true" />
-      <el-table-column label="应用名称" align="center" prop="appName" min-width="140" :show-overflow-tooltip="true" />
-      <el-table-column label="包名 / Bundle ID" align="center" prop="bundleId" min-width="220" :show-overflow-tooltip="true" />
+      <el-table-column label="应用名称" align="center" prop="appName" min-width="160" :show-overflow-tooltip="true" />
+      <el-table-column label="应用链接" align="center" prop="appLink" min-width="260" :show-overflow-tooltip="true" />
       <el-table-column label="平台" align="center" prop="storePlatform" width="120" />
-      <el-table-column label="地区" align="center" prop="region" width="100" />
       <el-table-column label="渠道" align="center" prop="channelType" width="120" />
       <el-table-column label="类型" align="center" prop="alertType" width="140" />
       <el-table-column label="告警内容" align="center" prop="alertMessage" min-width="240" :show-overflow-tooltip="true" />

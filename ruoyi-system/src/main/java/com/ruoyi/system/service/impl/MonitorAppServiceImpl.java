@@ -55,6 +55,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     private static final String SCAN_MODE_PLAYWRIGHT = "playwright";
     private static final String DEFAULT_OWNER_TYPE = "system";
     private static final String TELEGRAM_BOT_TOKEN_CONFIG_KEY = "monitor.telegram.botToken";
+    private static final String TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY = "monitor.telegram.alertTemplate";
     private static final String DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         + "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
 
@@ -234,7 +235,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         List<MonitorAppScanResultVo> results = new ArrayList<>();
         MonitorApp query = new MonitorApp();
-        applyDataPermission(query);
         List<MonitorApp> apps = monitorAppMapper.selectMonitorAppList(query);
         String resolvedOperator = resolveOperator(operator);
         String resolvedScanMode = resolveScanMode(scanMode);
@@ -376,13 +376,14 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         String alertType = currentStatus != null && currentStatus == 1 ? ALERT_TYPE_ONLINE : ALERT_TYPE_OFFLINE;
         String statusText = currentStatus != null && currentStatus == 1 ? "ONLINE" : "OFFLINE";
         String detailUrl = resolveGooglePlayUrl(monitorApp);
-        String content = String.format("[Google Play App Status Changed]%nProduct: %s%nApp: %s%nBundle: %s%nStatus: %s%nURL: %s%nDetail: %s",
+        String content = String.format("[Google Play App Status Changed]%nProduct: %s%nApp: %s%nApp Link: %s%nStatus: %s%nURL: %s%nDetail: %s",
             monitorApp.getProductName() + " / " + monitorApp.getAppName(),
             monitorApp.getAppName(),
-            extractBundleId(monitorApp),
+            detailUrl,
             statusText,
             detailUrl,
             detailMessage);
+        String telegramContent = buildTelegramAlertMessage(monitorApp, statusText, detailUrl, detailMessage);
 
         List<MonitorAlertChannel> channels = resolveAlertChannels(monitorApp);
         if (channels == null || channels.isEmpty())
@@ -395,7 +396,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         boolean anyNotified = false;
         for (MonitorAlertChannel channel : channels)
         {
-            TelegramSendResult sendResult = sendTelegramMessage(channel, content);
+            TelegramSendResult sendResult = sendTelegramMessage(channel, telegramContent);
             insertAlertRecord(monitorApp, ALERT_CHANNEL_TELEGRAM, alertType, content,
                 buildExtJson(detailUrl, sendResult.isSuccess(), sendResult.getMessage() + ", channel: " + channel.getName()), alertTime);
             anyNotified = anyNotified || sendResult.isSuccess();
@@ -451,6 +452,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             }
             String body = "chat_id=" + urlEncode(channel.getChatId())
                 + "&text=" + urlEncode(message)
+                + "&parse_mode=HTML"
                 + "&disable_web_page_preview=true";
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.telegram.org/bot" + botToken + "/sendMessage"))
@@ -489,6 +491,48 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         ext.put("success", success);
         ext.put("message", message);
         return JSON.toJSONString(ext);
+    }
+
+    private String buildTelegramAlertMessage(MonitorApp monitorApp, String statusText, String detailUrl, String detailMessage)
+    {
+        String alertTitle = "OFFLINE".equals(statusText) ? "应用下架告警" : "应用恢复通知";
+        String statusLabel = "OFFLINE".equals(statusText) ? "下架/不可用" : "已恢复/可访问";
+        String productName = monitorApp == null || monitorApp.getProductName() == null ? StringUtils.EMPTY : monitorApp.getProductName();
+        String appName = monitorApp == null || monitorApp.getAppName() == null ? StringUtils.EMPTY : monitorApp.getAppName();
+        String template = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY));
+        if (StringUtils.isBlank(template))
+        {
+            template = "<b>【${alertTitle}】</b>\n"
+                + "<b>当前状态：</b><code>${statusLabel}</code>\n"
+                + "<b>产品：</b>${productName}\n"
+                + "<b>应用：</b>${appName}\n"
+                + "<b>商店链接：</b><a href=\"${detailUrl}\">立即查看</a>\n"
+                + "<b>异常说明：</b>${detailMessage}";
+        }
+        return template
+            .replace("${alertTitle}", escapeHtml(alertTitle))
+            .replace("${status}", escapeHtml(statusText))
+            .replace("${statusLabel}", escapeHtml(statusLabel))
+            .replace("${productName}", escapeHtml(productName))
+            .replace("${appName}", escapeHtml(appName))
+            .replace("${detailUrl}", escapeHtmlAttribute(detailUrl))
+            .replace("${detailMessage}", escapeHtml(detailMessage));
+    }
+
+    private String escapeHtml(String text)
+    {
+        if (text == null)
+        {
+            return StringUtils.EMPTY;
+        }
+        return text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;");
+    }
+
+    private String escapeHtmlAttribute(String text)
+    {
+        return escapeHtml(text).replace("\"", "&quot;");
     }
 
     private boolean isGooglePlayApp(MonitorApp monitorApp)

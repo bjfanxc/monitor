@@ -165,16 +165,40 @@ export default {
 
 <style rel="stylesheet/scss" lang="scss" scoped>
 .login {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100%;
   padding: 40px 24px 88px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at left top, rgba(52, 135, 218, 0.28), transparent 28%),
-    radial-gradient(circle at 80% 18%, rgba(38, 153, 123, 0.2), transparent 24%),
-    linear-gradient(135deg, rgba(11, 18, 32, 0.9), rgba(22, 40, 68, 0.82)),
-    url("../assets/images/login-background.jpg") center/cover no-repeat;
+    linear-gradient(135deg, rgba(6, 17, 31, 0.44), rgba(11, 29, 49, 0.38)),
+    url("../assets/images/login-background-tech.svg") center/cover no-repeat,
+    linear-gradient(135deg, #071425 0%, #0e2540 100%);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &::before {
+    background:
+      radial-gradient(circle at 20% 20%, rgba(94, 159, 255, 0.2), transparent 18%),
+      radial-gradient(circle at 82% 22%, rgba(70, 214, 198, 0.14), transparent 18%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    opacity: 0.9;
+  }
+
+  &::after {
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(4, 10, 19, 0.38), transparent 24%, transparent 76%, rgba(4, 10, 19, 0.28)),
+      linear-gradient(180deg, rgba(4, 10, 19, 0.08), rgba(4, 10, 19, 0.22));
+  }
 }
 
 .login-shell {
@@ -196,12 +220,60 @@ export default {
 }
 
 .login-brand {
+  position: relative;
   padding: 40px;
   border-radius: 28px;
   color: #eef6ff;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(145deg, rgba(74, 92, 121, 0.88), rgba(48, 65, 89, 0.92)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &::before {
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.3;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.8));
+  }
+
+  &::after {
+    inset: -18% auto auto 52%;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(117, 164, 255, 0.3), rgba(117, 164, 255, 0));
+    filter: blur(10px);
+    opacity: 0.9;
+  }
+
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .eyebrow::before {
+    content: "";
+    display: inline-block;
+    width: 32px;
+    height: 1px;
+    margin-right: 14px;
+    vertical-align: middle;
+    background: linear-gradient(90deg, rgba(121, 233, 222, 0.85), rgba(121, 233, 222, 0));
+  }
 
   .eyebrow {
     margin: 0 0 12px;
@@ -226,6 +298,70 @@ export default {
     line-height: 1.8;
     color: rgba(230, 239, 250, 0.8);
   }
+
+  h1,
+  .brand-copy,
+  .eyebrow {
+    text-shadow: 0 10px 24px rgba(7, 16, 30, 0.22);
+  }
+}
+
+.login-brand::marker {
+  content: "";
+}
+
+.login-brand::before,
+.login-brand::after {
+  z-index: 0;
+}
+
+.login-brand {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 30px 50px rgba(5, 12, 24, 0.28);
+}
+
+.login-brand .brand-copy::after {
+  content: "";
+  display: block;
+  width: 148px;
+  height: 2px;
+  margin-top: 22px;
+  background: linear-gradient(90deg, rgba(121, 233, 222, 0.95), rgba(122, 174, 255, 0.12));
+  box-shadow: 0 0 18px rgba(121, 233, 222, 0.2);
+}
+
+.login-brand .brand-copy::before {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: -280px;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgba(121, 233, 222, 0.16);
+  border-radius: 32px;
+  transform: rotate(18deg);
+  opacity: 0.55;
+}
+
+.login-brand h1::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  bottom: -22px;
+  width: 210px;
+  height: 46px;
+  background:
+    radial-gradient(circle at 12px 23px, rgba(121, 233, 222, 0.9) 0 3px, transparent 4px),
+    linear-gradient(90deg, rgba(121, 233, 222, 0.7), rgba(121, 233, 222, 0.08));
+  clip-path: polygon(0 52%, 18% 44%, 33% 64%, 49% 28%, 63% 42%, 78% 18%, 100% 34%, 100% 40%, 78% 24%, 63% 48%, 49% 34%, 33% 70%, 18% 50%, 0 58%);
+  opacity: 0.7;
+}
+
+.login-brand h1,
+.login-brand .brand-copy {
+  position: relative;
 }
 
 .title {

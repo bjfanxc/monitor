@@ -9,9 +9,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="appId" column="app_id" />
         <result property="productName" column="product_name" />
         <result property="appName" column="app_name" />
-        <result property="bundleId" column="bundle_id" />
+        <result property="appLink" column="app_link" />
         <result property="storePlatform" column="store_platform" />
-        <result property="region" column="region" />
         <result property="channelType" column="channel_type" />
         <result property="alertType" column="alert_type" />
         <result property="alertMessage" column="alert_message" />
@@ -26,7 +25,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <select id="selectMonitorAlertRecordList" parameterType="com.ruoyi.system.domain.MonitorAlertRecord" resultMap="MonitorAlertRecordResult">
-        select r.id, r.app_id, a.product_name, a.app_name, a.bundle_id, a.store_platform, a.region,
+        select r.id, r.app_id, a.product_name, a.app_name, a.app_link, a.store_platform,
                r.channel_type, r.alert_type, r.alert_message, r.alert_time,
                cast(r.ext_json as char) as ext_json, r.del_flag, r.create_by,
                r.create_time, r.update_by, r.update_time, r.remark
@@ -37,7 +36,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="keyword != null and keyword != ''">
                 and (a.product_name like concat('%', #{keyword}, '%')
                 or a.app_name like concat('%', #{keyword}, '%')
-                or a.bundle_id like concat('%', #{keyword}, '%'))
+                or a.app_link like concat('%', #{keyword}, '%'))
             </if>
             <if test="channelType != null and channelType != ''">
                 and r.channel_type = #{channelType}

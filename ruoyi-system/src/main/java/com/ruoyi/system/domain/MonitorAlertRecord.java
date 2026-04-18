@@ -26,14 +26,11 @@ public class MonitorAlertRecord extends BaseEntity
     /** 应用名称 */
     private String appName;
 
-    /** 包名 */
-    private String bundleId;
+    /** 应用链接 */
+    private String appLink;
 
     /** 商店平台 */
     private String storePlatform;
-
-    /** 地区 */
-    private String region;
 
     /** 告警渠道 */
     private String channelType;
@@ -97,14 +94,14 @@ public class MonitorAlertRecord extends BaseEntity
         this.appName = appName;
     }
 
-    public String getBundleId()
+    public String getAppLink()
     {
-        return bundleId;
+        return appLink;
     }
 
-    public void setBundleId(String bundleId)
+    public void setAppLink(String appLink)
     {
-        this.bundleId = bundleId;
+        this.appLink = appLink;
     }
 
     public String getStorePlatform()
@@ -115,16 +112,6 @@ public class MonitorAlertRecord extends BaseEntity
     public void setStorePlatform(String storePlatform)
     {
         this.storePlatform = storePlatform;
-    }
-
-    public String getRegion()
-    {
-        return region;
-    }
-
-    public void setRegion(String region)
-    {
-        this.region = region;
     }
 
     public String getChannelType()
@@ -205,9 +192,8 @@ public class MonitorAlertRecord extends BaseEntity
             .append("appId", getAppId())
             .append("productName", getProductName())
             .append("appName", getAppName())
-            .append("bundleId", getBundleId())
+            .append("appLink", getAppLink())
             .append("storePlatform", getStorePlatform())
-            .append("region", getRegion())
             .append("channelType", getChannelType())
             .append("alertType", getAlertType())
             .append("alertMessage", getAlertMessage())
