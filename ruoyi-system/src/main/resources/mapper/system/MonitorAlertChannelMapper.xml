@@ -38,7 +38,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             channel_type = 'telegram'
             and del_flag = '0'
             <if test="name != null and name != ''">
-                and name like concat('%', #{name}, '%')
+                and (name like concat('%', #{name}, '%')
+                or create_by like concat('%', #{name}, '%'))
             </if>
             <if test="enabled != null">
                 and enabled = #{enabled}
@@ -57,6 +58,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and del_flag = '0'
           and create_by = #{createBy}
         order by update_time desc, create_time desc, id desc
+    </select>
+
+    <select id="selectTelegramChannelByChatId" parameterType="String" resultMap="MonitorAlertChannelResult">
+        <include refid="selectMonitorAlertChannelVo" />
+        where channel_type = 'telegram'
+          and chat_id = #{chatId}
+          and del_flag = '0'
+        limit 1
     </select>
 
     <insert id="insertMonitorAlertChannel" parameterType="com.ruoyi.system.domain.MonitorAlertChannel" useGeneratedKeys="true" keyProperty="id">
@@ -88,6 +97,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="botToken != null and botToken != ''">bot_token = #{botToken},</if>
             <if test="chatId != null and chatId != ''">chat_id = #{chatId},</if>
             <if test="enabled != null">enabled = #{enabled},</if>
+            <if test="createBy != null and createBy != ''">create_by = #{createBy},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
             update_time = sysdate()

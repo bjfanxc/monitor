@@ -34,6 +34,14 @@ public interface IMonitorAlertChannelService
     int updateMonitorAlertChannel(MonitorAlertChannel channel);
 
     /**
+     * 处理 Telegram webhook 绑定请求
+     *
+     * @param payload Telegram webhook payload
+     * @return 处理结果
+     */
+    String handleTelegramWebhook(String payload);
+
+    /**
      * 删除告警渠道
      *
      * @param id 渠道ID

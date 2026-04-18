@@ -7,6 +7,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.system.domain.MonitorAlertChannel;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
+import com.ruoyi.system.service.ISysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -16,10 +17,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Telegram 告警渠道管理
@@ -31,6 +37,9 @@ public class MonitorAlertChannelController extends BaseController
     @Autowired
     private IMonitorAlertChannelService monitorAlertChannelService;
 
+    @Autowired
+    private ISysConfigService sysConfigService;
+
     /**
      * 获取 Telegram 渠道列表
      */
@@ -41,6 +50,39 @@ public class MonitorAlertChannelController extends BaseController
         startPage();
         List<MonitorAlertChannel> list = monitorAlertChannelService.selectTelegramChannelList(channel);
         return getDataTable(list);
+    }
+
+    @PreAuthorize("@ss.hasPermi('monitor:alert:channel:list')")
+    @GetMapping("/bindingInfo")
+    public AjaxResult bindingInfo()
+    {
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("botLink", sysConfigService.selectConfigByKey("monitor.telegram.botLink"));
+        data.put("botUsername", sysConfigService.selectConfigByKey("monitor.telegram.botUsername"));
+        data.put("bindKeyword", sysConfigService.selectConfigByKey("monitor.telegram.bindKeyword"));
+        data.put("tokenConfigured", !"".equals(sysConfigService.selectConfigByKey("monitor.telegram.botToken")));
+        return success(data);
+    }
+
+    @PostMapping("/webhook")
+    public ResponseEntity<AjaxResult> webhook(@RequestBody(required = false) String payload,
+                                              @RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secretToken)
+    {
+        String configuredSecret = sysConfigService.selectConfigByKey("monitor.telegram.webhookSecret");
+        if (configuredSecret != null && !configuredSecret.isEmpty() && !configuredSecret.equals(secretToken))
+        {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(AjaxResult.error("invalid webhook secret"));
+        }
+        try
+        {
+            String message = monitorAlertChannelService.handleTelegramWebhook(payload);
+            return ResponseEntity.ok(AjaxResult.success(message));
+        }
+        catch (Exception e)
+        {
+            // Always return 200 to avoid Telegram repeated retries for business validation failures.
+            return ResponseEntity.ok(AjaxResult.error(e.getMessage()));
+        }
     }
 
     /**

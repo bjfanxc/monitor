@@ -27,6 +27,8 @@ public interface MonitorAlertChannelMapper
 
     List<MonitorAlertChannel> selectEnabledTelegramChannelsByCreateBy(String createBy);
 
+    MonitorAlertChannel selectTelegramChannelByChatId(String chatId);
+
     /**
      * 新增告警渠道
      *

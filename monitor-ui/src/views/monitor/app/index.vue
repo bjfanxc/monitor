@@ -25,7 +25,7 @@
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
-          placeholder="请输入产品名称、应用名称或包名"
+          placeholder="请输入产品名称、应用名称或应用链接"
           clearable
           style="width: 280px"
           @keyup.enter.native="handleQuery"
@@ -37,15 +37,6 @@
           placeholder="请输入商店平台"
           clearable
           style="width: 220px"
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="地区" prop="region">
-        <el-input
-          v-model="queryParams.region"
-          placeholder="请输入地区"
-          clearable
-          style="width: 210px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -114,14 +105,17 @@
       <el-table-column label="ID" align="center" prop="id" width="80" />
       <el-table-column label="产品名称" align="center" prop="productName" :show-overflow-tooltip="true" min-width="140" />
       <el-table-column label="应用名称" align="center" prop="appName" :show-overflow-tooltip="true" min-width="140" />
-      <el-table-column label="包名 / Bundle ID" align="center" prop="bundleId" :show-overflow-tooltip="true" min-width="220" />
+      <el-table-column label="应用链接" align="center" prop="appLink" :show-overflow-tooltip="true" min-width="260">
+        <template slot-scope="scope">
+          <a class="link-type" :href="scope.row.appLink" target="_blank" rel="noopener noreferrer">{{ scope.row.appLink }}</a>
+        </template>
+      </el-table-column>
       <el-table-column label="平台" align="center" prop="storePlatform" width="120">
         <template slot-scope="scope">
           <span>{{ storePlatformLabel(scope.row.storePlatform) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="地区" align="center" prop="region" width="100" />
-      <el-table-column label="所属类型" align="center" prop="ownerType" width="150">
+      <el-table-column label="告警配置" align="center" prop="ownerType" width="150">
         <template slot-scope="scope">
           <span>{{ ownerTypeLabel(scope.row.ownerType) }}</span>
         </template>
@@ -172,8 +166,8 @@
     />
 
     <el-dialog :title="title" :visible.sync="open" width="760px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="110px">
-        <el-row :gutter="16">
+      <el-form ref="form" class="app-edit-form" :model="form" :rules="rules" label-width="136px">
+        <el-row :gutter="16" class="app-edit-grid">
           <el-col :span="12">
             <el-form-item label="产品名称" prop="productName">
               <el-input v-model="form.productName" placeholder="请输入产品名称" />
@@ -182,11 +176,6 @@
           <el-col :span="12">
             <el-form-item label="应用名称" prop="appName">
               <el-input v-model="form.appName" placeholder="请输入应用名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="包名 / Bundle ID" prop="bundleId">
-              <el-input v-model="form.bundleId" placeholder="请输入包名或 Bundle ID" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -201,21 +190,14 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="地区" prop="region">
-              <el-select v-model="form.region" placeholder="请选择地区" style="width: 100%">
-                <el-option
-                  v-for="item in regionOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+          <el-col :span="24">
+            <el-form-item label="应用链接" prop="appLink">
+              <el-input v-model="form.appLink" type="textarea" :rows="3" resize="none" placeholder="请输入应用链接" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="所属类型" prop="ownerType">
-              <el-select v-model="form.ownerType" placeholder="请选择所属类型" style="width: 100%">
+            <el-form-item label="告警配置" prop="ownerType">
+              <el-select v-model="form.ownerType" placeholder="请选择告警配置" style="width: 100%">
                 <el-option
                   v-for="item in ownerTypeOptions"
                   :key="item.value"
@@ -299,8 +281,7 @@ export default {
         pageSize: 10,
         keyword: undefined,
         status: undefined,
-        storePlatform: undefined,
-        region: undefined
+        storePlatform: undefined
       },
       form: {},
       upload: {
@@ -312,10 +293,9 @@ export default {
       rules: {
         productName: [{ required: true, message: "产品名称不能为空", trigger: "blur" }],
         appName: [{ required: true, message: "应用名称不能为空", trigger: "blur" }],
-        bundleId: [{ required: true, message: "包名 / Bundle ID 不能为空", trigger: "blur" }],
+        appLink: [{ required: true, message: "应用链接不能为空", trigger: "blur" }],
         storePlatform: [{ required: true, message: "商店平台不能为空", trigger: "change" }],
-        region: [{ required: true, message: "地区不能为空", trigger: "change" }],
-        ownerType: [{ required: true, message: "所属类型不能为空", trigger: "change" }]
+        ownerType: [{ required: true, message: "告警配置不能为空", trigger: "change" }]
       }
     }
   },
@@ -326,12 +306,6 @@ export default {
         value: item.value
       }))
     },
-    regionOptions() {
-      return (this.dict.type.monitor_area_type || []).map(item => ({
-        label: item.label,
-        value: item.value
-      }))
-    }
   },
   created() {
     this.getFormOptions()
@@ -394,9 +368,8 @@ export default {
         id: undefined,
         productName: undefined,
         appName: undefined,
-        bundleId: undefined,
+        appLink: undefined,
         storePlatform: undefined,
-        region: undefined,
         ownerType: undefined,
         status: 1,
         remark: undefined
@@ -445,7 +418,6 @@ export default {
         }
         const payload = {
           ...this.form,
-          region: this.form.region ? String(this.form.region).toUpperCase() : this.form.region,
           ownerType: this.form.ownerType ? String(this.form.ownerType) : this.form.ownerType
         }
         const request = payload.id ? updateApp(payload) : addApp(payload)
@@ -559,5 +531,19 @@ export default {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.app-edit-form .el-form-item__label {
+  white-space: nowrap;
+}
+
+.app-edit-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.app-edit-grid > .el-col {
+  float: none;
 }
 </style>

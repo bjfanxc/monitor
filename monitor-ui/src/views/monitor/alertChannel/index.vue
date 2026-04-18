@@ -1,17 +1,36 @@
 <template>
   <div class="app-container monitor-alert-channel-page">
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="68px">
+    <div class="binding-guide">
+      <div class="binding-guide__title">绑定 Telegram 机器人步骤：</div>
+      <div class="binding-guide__item">
+        1. 将
+        <a v-if="bindingInfo.botLink" :href="bindingInfo.botLink" target="_blank" rel="noopener noreferrer">{{ bindingInfo.botLink }}</a>
+        <span v-else>平台 Telegram 机器人</span>
+        拉到群成员或者频道管理员。
+      </div>
+      <div class="binding-guide__item">
+        2. 在群里或频道里发送“{{ bindingCommandExample }}”，机器人收到 webhook 后会自动把当前 Chat ID 绑定到对应账号。
+      </div>
+      <div class="binding-guide__item">
+        绑定后会自动出现在下方列表，无需手工填写 Chat ID。
+      </div>
+      <div v-if="!bindingInfo.tokenConfigured" class="binding-guide__warn">
+        当前平台机器人 Token 未在系统参数中配置，请先在参数设置中维护 `monitor.telegram.botToken`。
+      </div>
+    </div>
+
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
       <el-form-item label="名称" prop="name">
         <el-input
           v-model="queryParams.name"
-          placeholder="请输入渠道名称"
+          placeholder="请输入群组/频道或绑定账号"
           clearable
-          style="width: 240px"
+          style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="状态" prop="enabled">
-        <el-select v-model="queryParams.enabled" placeholder="请选择状态" clearable style="width: 160px">
+        <el-select v-model="queryParams.enabled" placeholder="请选择状态" clearable style="width: 220px">
           <el-option label="启用" :value="1" />
           <el-option label="停用" :value="0" />
         </el-select>
@@ -23,23 +42,6 @@
 
       <div class="query-toolbar">
         <div class="query-toolbar__actions">
-          <el-button
-            type="primary"
-            plain
-            icon="el-icon-plus"
-            size="mini"
-            @click="handleAdd"
-            v-hasPermi="['monitor:alert:channel:add']"
-          >新增</el-button>
-          <el-button
-            type="success"
-            plain
-            icon="el-icon-edit"
-            size="mini"
-            :disabled="single"
-            @click="handleUpdate"
-            v-hasPermi="['monitor:alert:channel:edit']"
-          >修改</el-button>
           <el-button
             type="danger"
             plain
@@ -57,13 +59,8 @@
     <el-table v-loading="loading" :data="channelList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="ID" align="center" prop="id" width="80" />
-      <el-table-column label="渠道名称" align="center" prop="name" min-width="180" :show-overflow-tooltip="true" />
-      <el-table-column label="渠道类型" align="center" prop="channelType" width="120" />
-      <el-table-column label="Bot Token" align="center" min-width="220" :show-overflow-tooltip="true">
-        <template slot-scope="scope">
-          <span>{{ maskToken(scope.row.botToken) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="群组/频道" align="center" prop="name" min-width="180" :show-overflow-tooltip="true" />
+      <el-table-column label="绑定账号" align="center" prop="createBy" min-width="150" :show-overflow-tooltip="true" />
       <el-table-column label="Chat ID" align="center" prop="chatId" min-width="180" :show-overflow-tooltip="true" />
       <el-table-column label="状态" align="center" width="100">
         <template slot-scope="scope">
@@ -83,13 +80,6 @@
           <el-button
             size="mini"
             type="text"
-            icon="el-icon-edit"
-            @click="handleUpdate(scope.row)"
-            v-hasPermi="['monitor:alert:channel:edit']"
-          >修改</el-button>
-          <el-button
-            size="mini"
-            type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
             v-hasPermi="['monitor:alert:channel:remove']"
@@ -106,52 +96,20 @@
       @pagination="getList"
     />
 
-    <el-dialog :title="title" :visible.sync="open" width="680px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="渠道名称" prop="name">
-              <el-input v-model="form.name" placeholder="请输入渠道名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态" prop="enabled">
-              <el-radio-group v-model="form.enabled">
-                <el-radio :label="1">启用</el-radio>
-                <el-radio :label="0">停用</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="Bot Token" prop="botToken">
-              <el-input v-model="form.botToken" placeholder="请输入 Telegram Bot Token" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="Chat ID" prop="chatId">
-              <el-input v-model="form.chatId" placeholder="请输入 Telegram Chat ID" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="form.remark" type="textarea" :rows="4" placeholder="请输入备注" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确定</el-button>
-        <el-button @click="cancel">取消</el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script>
-import { addAlertChannel, delAlertChannel, listAlertChannel, updateAlertChannel } from "@/api/monitor/alertChannel"
+import { delAlertChannel, getAlertBindingInfo, listAlertChannel } from "@/api/monitor/alertChannel"
 
 export default {
   name: "MonitorAlertChannel",
+  computed: {
+    bindingCommandExample() {
+      const keyword = this.bindingInfo.bindKeyword || "绑定机器人"
+      return `${keyword}:你的用户名或邮箱`
+    }
+  },
   data() {
     return {
       loading: false,
@@ -160,26 +118,35 @@ export default {
       single: true,
       ids: [],
       channelList: [],
-      open: false,
-      title: "",
+      bindingInfo: {
+        botLink: "",
+        botUsername: "",
+        bindKeyword: "",
+        tokenConfigured: true
+      },
       queryParams: {
         pageNum: 1,
         pageSize: 10,
         name: undefined,
         enabled: undefined
-      },
-      form: {},
-      rules: {
-        name: [{ required: true, message: "渠道名称不能为空", trigger: "blur" }],
-        botToken: [{ required: true, message: "Bot Token 不能为空", trigger: "blur" }],
-        chatId: [{ required: true, message: "Chat ID 不能为空", trigger: "blur" }]
       }
     }
   },
   created() {
+    this.getBindingInfo()
     this.getList()
   },
   methods: {
+    getBindingInfo() {
+      getAlertBindingInfo().then(response => {
+        this.bindingInfo = {
+          botLink: response.data.botLink || "",
+          botUsername: response.data.botUsername || "",
+          bindKeyword: response.data.bindKeyword || "",
+          tokenConfigured: response.data.tokenConfigured !== false
+        }
+      })
+    },
     getList() {
       this.loading = true
       listAlertChannel(this.queryParams).then(response => {
@@ -189,17 +156,6 @@ export default {
       }).catch(() => {
         this.loading = false
       })
-    },
-    reset() {
-      this.form = {
-        id: undefined,
-        name: undefined,
-        botToken: undefined,
-        chatId: undefined,
-        enabled: 1,
-        remark: undefined
-      }
-      this.resetForm("form")
     },
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.id)
@@ -213,58 +169,55 @@ export default {
       this.resetForm("queryForm")
       this.handleQuery()
     },
-    handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = "新增 Telegram 渠道"
-    },
-    handleUpdate(row) {
-      this.reset()
-      const current = row || this.channelList.find(item => item.id === this.ids[0])
-      this.form = { ...current }
-      this.open = true
-      this.title = "修改 Telegram 渠道"
-    },
-    cancel() {
-      this.open = false
-      this.reset()
-    },
-    submitForm() {
-      this.$refs.form.validate(valid => {
-        if (!valid) {
-          return
-        }
-        const request = this.form.id ? updateAlertChannel(this.form) : addAlertChannel(this.form)
-        request.then(() => {
-          this.$modal.msgSuccess(this.form.id ? "修改成功" : "新增成功")
-          this.open = false
-          this.getList()
-        })
-      })
-    },
     handleDelete(row) {
       const target = row || this.channelList.find(item => item.id === this.ids[0])
       if (!target) {
         return
       }
-      this.$modal.confirm('确认删除渠道 "' + target.name + '" 吗？').then(() => {
+      this.$modal.confirm('确认删除机器人绑定 "' + target.name + '" 吗？').then(() => {
         return delAlertChannel(target.id)
       }).then(() => {
         this.$modal.msgSuccess("删除成功")
         this.getList()
       }).catch(() => {})
-    },
-    maskToken(token) {
-      if (!token || token.length <= 10) {
-        return token || "-"
-      }
-      return token.slice(0, 6) + "******" + token.slice(-4)
     }
   }
 }
 </script>
 
 <style scoped>
+.binding-guide {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid rgba(219, 228, 239, 0.95);
+  border-radius: 14px;
+  box-shadow: var(--panel-shadow-soft);
+}
+
+.binding-guide__title {
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2a44;
+}
+
+.binding-guide__item {
+  line-height: 1.9;
+  color: #d03050;
+  font-size: 14px;
+}
+
+.binding-guide__item a {
+  color: #1f6fd2;
+}
+
+.binding-guide__warn {
+  margin-top: 10px;
+  color: #e67e22;
+  font-size: 13px;
+}
+
 .query-toolbar {
   width: 100%;
   margin-top: 6px;

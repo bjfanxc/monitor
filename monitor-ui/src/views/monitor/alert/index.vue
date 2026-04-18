@@ -1,12 +1,12 @@
 <template>
-  <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
+  <div class="app-container monitor-alert-page">
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
       <el-form-item label="关键字" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
           placeholder="请输入产品名、应用名或包名"
           clearable
-          style="width: 260px"
+          style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -15,7 +15,7 @@
           v-model="queryParams.channelType"
           placeholder="请输入告警渠道"
           clearable
-          style="width: 180px"
+          style="width: 220px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -24,7 +24,7 @@
           v-model="queryParams.alertType"
           placeholder="请输入告警类型"
           clearable
-          style="width: 180px"
+          style="width: 210px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -119,14 +119,14 @@ export default {
 
 <style scoped>
 .query-toolbar {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(219, 228, 239, 0.95);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  width: 100%;
-  margin-top: 8px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(226, 232, 240, 0.95);
+  gap: 12px;
 }
 
 .query-toolbar__summary {

@@ -8,9 +8,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <id property="id" column="id" />
         <result property="productName" column="product_name" />
         <result property="appName" column="app_name" />
-        <result property="bundleId" column="bundle_id" />
+        <result property="appLink" column="app_link" />
         <result property="storePlatform" column="store_platform" />
-        <result property="region" column="region" />
         <result property="ownerType" column="owner_type" />
         <result property="status" column="status" />
         <result property="lastScanTime" column="last_scan_time" />
@@ -23,7 +22,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectMonitorAppVo">
-        select id, product_name, app_name, bundle_id, store_platform, region, owner_type, status,
+        select id, product_name, app_name, app_link, store_platform, owner_type, status,
                last_scan_time, del_flag, create_by, create_time, update_by, update_time, remark
         from monitor_app
     </sql>
@@ -52,16 +51,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="keyword != null and keyword != ''">
                 and (product_name like concat('%', #{keyword}, '%')
                 or app_name like concat('%', #{keyword}, '%')
-                or bundle_id like concat('%', #{keyword}, '%'))
+                or app_link like concat('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
                 and status = #{status}
             </if>
             <if test="storePlatform != null and storePlatform != ''">
                 and store_platform = #{storePlatform}
-            </if>
-            <if test="region != null and region != ''">
-                and region = #{region}
             </if>
             <if test="params.currentUsername != null and params.currentUsername != ''">
                 and create_by = #{params.currentUsername}
@@ -72,9 +68,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="selectMonitorAppByUniqueKey" parameterType="com.ruoyi.system.domain.MonitorApp" resultMap="MonitorAppResult">
         <include refid="selectMonitorAppVo" />
-        where bundle_id = #{bundleId}
+        where app_link = #{appLink}
           and store_platform = #{storePlatform}
-          and region = #{region}
           and del_flag = '0'
         <if test="id != null">
           and id != #{id}
@@ -86,9 +81,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into monitor_app(
             <if test="productName != null and productName != ''">product_name,</if>
             <if test="appName != null and appName != ''">app_name,</if>
-            <if test="bundleId != null and bundleId != ''">bundle_id,</if>
+            <if test="appLink != null and appLink != ''">app_link,</if>
             <if test="storePlatform != null and storePlatform != ''">store_platform,</if>
-            <if test="region != null and region != ''">region,</if>
             <if test="ownerType != null and ownerType != ''">owner_type,</if>
             <if test="status != null">status,</if>
             <if test="lastScanTime != null">last_scan_time,</if>
@@ -98,9 +92,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         ) values (
             <if test="productName != null and productName != ''">#{productName},</if>
             <if test="appName != null and appName != ''">#{appName},</if>
-            <if test="bundleId != null and bundleId != ''">#{bundleId},</if>
+            <if test="appLink != null and appLink != ''">#{appLink},</if>
             <if test="storePlatform != null and storePlatform != ''">#{storePlatform},</if>
-            <if test="region != null and region != ''">#{region},</if>
             <if test="ownerType != null and ownerType != ''">#{ownerType},</if>
             <if test="status != null">#{status},</if>
             <if test="lastScanTime != null">#{lastScanTime},</if>
@@ -115,9 +108,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <set>
             <if test="productName != null and productName != ''">product_name = #{productName},</if>
             <if test="appName != null and appName != ''">app_name = #{appName},</if>
-            <if test="bundleId != null and bundleId != ''">bundle_id = #{bundleId},</if>
+            <if test="appLink != null and appLink != ''">app_link = #{appLink},</if>
             <if test="storePlatform != null and storePlatform != ''">store_platform = #{storePlatform},</if>
-            <if test="region != null and region != ''">region = #{region},</if>
             <if test="ownerType != null and ownerType != ''">owner_type = #{ownerType},</if>
             <if test="status != null">status = #{status},</if>
             <if test="lastScanTime != null">last_scan_time = #{lastScanTime},</if>

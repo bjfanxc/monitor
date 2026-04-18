@@ -20,6 +20,7 @@ import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.mapper.MonitorAlertRecordMapper;
 import com.ruoyi.system.mapper.MonitorAppMapper;
 import com.ruoyi.system.service.IMonitorAppService;
+import com.ruoyi.system.service.ISysConfigService;
 import com.ruoyi.system.service.ISysDictDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,8 +38,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * App monitor service implementation.
@@ -54,7 +53,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     private static final String ALERT_CHANNEL_TELEGRAM = "telegram";
     private static final String SCAN_MODE_HTTP = "http";
     private static final String SCAN_MODE_PLAYWRIGHT = "playwright";
-    private static final String DEFAULT_REGION = "US";
+    private static final String DEFAULT_OWNER_TYPE = "system";
+    private static final String TELEGRAM_BOT_TOKEN_CONFIG_KEY = "monitor.telegram.botToken";
     private static final String DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         + "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
 
@@ -75,6 +75,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     @Autowired
     private ISysDictDataService sysDictDataService;
 
+    @Autowired
+    private ISysConfigService sysConfigService;
+
     @Override
     public MonitorAppOverviewVo selectMonitorAppOverview()
     {
@@ -92,9 +95,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     @Override
     public Map<String, Object> selectMonitorAppFormOptions()
     {
-        Map<String, Object> result = new LinkedHashMap<>(3);
+        Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("storePlatforms", buildStorePlatformOptions());
-        result.put("regions", buildRegionOptions());
         result.put("ownerTypes", buildOwnerTypeOptions());
         return result;
     }
@@ -161,20 +163,13 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             try
             {
                 normalizeMonitorApp(monitorApp);
+                applyImportDefaults(monitorApp);
                 validateImportRow(monitorApp);
                 monitorApp.setCreateBy(operName);
                 monitorApp.setUpdateBy(operName);
                 MonitorApp exists = monitorAppMapper.selectMonitorAppByUniqueKey(monitorApp);
                 if (StringUtils.isNull(exists))
                 {
-                    if (monitorApp.getStatus() == null)
-                    {
-                        monitorApp.setStatus(1);
-                    }
-                    if (StringUtils.isBlank(monitorApp.getOwnerType()))
-                    {
-                        monitorApp.setOwnerType("system");
-                    }
                     monitorAppMapper.insertMonitorApp(monitorApp);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append(". App ")
@@ -184,14 +179,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                 {
                     checkDataPermission(exists.getCreateBy());
                     monitorApp.setId(exists.getId());
-                    if (monitorApp.getStatus() == null)
-                    {
-                        monitorApp.setStatus(exists.getStatus());
-                    }
-                    if (StringUtils.isBlank(monitorApp.getOwnerType()))
-                    {
-                        monitorApp.setOwnerType(exists.getOwnerType());
-                    }
+                    monitorApp.setStatus(exists.getStatus());
+                    monitorApp.setOwnerType(exists.getOwnerType());
                     monitorAppMapper.updateMonitorApp(monitorApp);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append(". App ")
@@ -202,7 +191,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                     failureNum++;
                     failureMsg.append("<br/>").append(failureNum).append(". App ")
                         .append(monitorApp.getAppName())
-                        .append(" already exists, unique key bundleId + storePlatform + region conflicts");
+                        .append(" already exists, unique key appLink + storePlatform conflicts");
                 }
             }
             catch (Exception e)
@@ -298,8 +287,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         MonitorAppScanResultVo result = new MonitorAppScanResultVo();
         result.setId(monitorApp.getId());
         result.setAppName(monitorApp.getAppName());
-        result.setBundleId(monitorApp.getBundleId());
-        result.setRegion(monitorApp.getRegion());
+        result.setBundleId(extractBundleId(monitorApp));
         result.setScanMode(scanMode);
         result.setPreviousStatus(previousStatus);
         result.setCurrentStatus(currentStatus);
@@ -322,8 +310,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private ScanOutcome fetchGooglePlayStatusByHttp(MonitorApp monitorApp)
     {
-        String region = resolveRegion(monitorApp.getRegion());
-        String detailUrl = buildGooglePlayUrl(monitorApp.getBundleId(), region);
+        String detailUrl = resolveGooglePlayUrl(monitorApp);
         try
         {
             HttpRequest request = HttpRequest.newBuilder()
@@ -338,7 +325,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             {
                 return ScanOutcome.offline("HTTP mode: Google Play returned status code " + response.statusCode());
             }
-            return evaluateGooglePlayDocument(response.body(), monitorApp.getBundleId(), SCAN_MODE_HTTP);
+            return evaluateGooglePlayDocument(response.body(), extractBundleId(monitorApp), SCAN_MODE_HTTP);
         }
         catch (Exception e)
         {
@@ -348,8 +335,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private ScanOutcome fetchGooglePlayStatusByPlaywright(MonitorApp monitorApp)
     {
-        String region = resolveRegion(monitorApp.getRegion());
-        String detailUrl = buildGooglePlayUrl(monitorApp.getBundleId(), region);
+        String detailUrl = resolveGooglePlayUrl(monitorApp);
         try (Playwright playwright = Playwright.create();
              Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true)))
         {
@@ -362,7 +348,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             page.navigate(detailUrl, options);
             page.waitForTimeout(1500);
             String html = page.content();
-            return evaluateGooglePlayDocument(html, monitorApp.getBundleId(), SCAN_MODE_PLAYWRIGHT);
+            return evaluateGooglePlayDocument(html, extractBundleId(monitorApp), SCAN_MODE_PLAYWRIGHT);
         }
         catch (Exception e)
         {
@@ -389,12 +375,11 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         String alertType = currentStatus != null && currentStatus == 1 ? ALERT_TYPE_ONLINE : ALERT_TYPE_OFFLINE;
         String statusText = currentStatus != null && currentStatus == 1 ? "ONLINE" : "OFFLINE";
-        String detailUrl = buildGooglePlayUrl(monitorApp.getBundleId(), monitorApp.getRegion());
-        String content = String.format("[Google Play App Status Changed]%nProduct: %s%nApp: %s%nBundle: %s%nRegion: %s%nStatus: %s%nURL: %s%nDetail: %s",
+        String detailUrl = resolveGooglePlayUrl(monitorApp);
+        String content = String.format("[Google Play App Status Changed]%nProduct: %s%nApp: %s%nBundle: %s%nStatus: %s%nURL: %s%nDetail: %s",
             monitorApp.getProductName() + " / " + monitorApp.getAppName(),
             monitorApp.getAppName(),
-            monitorApp.getBundleId(),
-            monitorApp.getRegion(),
+            extractBundleId(monitorApp),
             statusText,
             detailUrl,
             detailMessage);
@@ -459,11 +444,16 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         try
         {
+            String botToken = resolveTelegramBotToken(channel);
+            if (StringUtils.isBlank(botToken))
+            {
+                return TelegramSendResult.failure("Telegram bot token is not configured");
+            }
             String body = "chat_id=" + urlEncode(channel.getChatId())
                 + "&text=" + urlEncode(message)
                 + "&disable_web_page_preview=true";
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.telegram.org/bot" + channel.getBotToken() + "/sendMessage"))
+                .uri(URI.create("https://api.telegram.org/bot" + botToken + "/sendMessage"))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
@@ -479,6 +469,17 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             return TelegramSendResult.failure("Telegram send exception: " + e.getMessage());
         }
+    }
+
+    private String resolveTelegramBotToken(MonitorAlertChannel channel)
+    {
+        String globalToken = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY));
+        if (StringUtils.isNotBlank(globalToken))
+        {
+            return globalToken;
+        }
+        // Keep backward compatibility with old per-channel token data until system config is filled.
+        return channel == null ? StringUtils.EMPTY : StringUtils.trim(channel.getBotToken());
     }
 
     private String buildExtJson(String detailUrl, boolean success, String message)
@@ -497,15 +498,18 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             GOOGLE_PLAY_STORE, "google-play", "googleplay", "Google Play");
     }
 
-    private String buildGooglePlayUrl(String bundleId, String region)
+    private String buildGooglePlayUrl(String bundleId)
     {
-        return "https://play.google.com/store/apps/details?id=" + urlEncode(bundleId)
-            + "&hl=en_US&gl=" + urlEncode(resolveRegion(region));
+        return "https://play.google.com/store/apps/details?id=" + urlEncode(bundleId) + "&hl=en_US&gl=US";
     }
 
-    private String resolveRegion(String region)
+    private String resolveGooglePlayUrl(MonitorApp monitorApp)
     {
-        return StringUtils.isNotBlank(region) ? region.trim().toUpperCase() : DEFAULT_REGION;
+        if (monitorApp != null && StringUtils.isNotBlank(monitorApp.getAppLink()))
+        {
+            return normalizeGooglePlayLink(monitorApp.getAppLink());
+        }
+        return buildGooglePlayUrl(extractBundleId(monitorApp));
     }
 
     private String urlEncode(String value)
@@ -560,18 +564,11 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             throw new ServiceException("App name cannot be empty");
         }
-        if (StringUtils.isBlank(monitorApp.getBundleId()))
+        if (StringUtils.isBlank(monitorApp.getAppLink()))
         {
-            throw new ServiceException("Bundle ID cannot be empty");
+            throw new ServiceException("App link cannot be empty");
         }
-        if (StringUtils.isBlank(monitorApp.getStorePlatform()))
-        {
-            throw new ServiceException("Store platform cannot be empty");
-        }
-        if (StringUtils.isBlank(monitorApp.getRegion()))
-        {
-            throw new ServiceException("Region cannot be empty");
-        }
+        // Store platform / region / alert config / status are intentionally hidden from import template.
     }
 
     private void normalizeMonitorApp(MonitorApp monitorApp)
@@ -582,14 +579,34 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
         monitorApp.setProductName(StringUtils.trim(monitorApp.getProductName()));
         monitorApp.setAppName(StringUtils.trim(monitorApp.getAppName()));
-        monitorApp.setBundleId(StringUtils.trim(monitorApp.getBundleId()));
+        monitorApp.setAppLink(StringUtils.trim(monitorApp.getAppLink()));
         monitorApp.setStorePlatform(StringUtils.trim(monitorApp.getStorePlatform()));
-        monitorApp.setRegion(StringUtils.trim(monitorApp.getRegion()));
-        if (StringUtils.isNotBlank(monitorApp.getRegion()))
+        if (StringUtils.isNotBlank(monitorApp.getAppLink()))
         {
-            monitorApp.setRegion(monitorApp.getRegion().toUpperCase());
+            monitorApp.setAppLink(normalizeGooglePlayLink(monitorApp.getAppLink()));
         }
         monitorApp.setOwnerType(StringUtils.trim(monitorApp.getOwnerType()));
+    }
+
+    private void applyImportDefaults(MonitorApp monitorApp)
+    {
+        if (monitorApp == null)
+        {
+            return;
+        }
+        // Import template intentionally hides these fields, so defaults are applied here.
+        if (StringUtils.isBlank(monitorApp.getStorePlatform()))
+        {
+            monitorApp.setStorePlatform(GOOGLE_PLAY_STORE);
+        }
+        if (StringUtils.isBlank(monitorApp.getOwnerType()))
+        {
+            monitorApp.setOwnerType(DEFAULT_OWNER_TYPE);
+        }
+        if (monitorApp.getStatus() == null)
+        {
+            monitorApp.setStatus(1);
+        }
     }
 
     private void validateOwnerType(MonitorApp monitorApp, String createBy)
@@ -638,31 +655,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         return options;
     }
 
-    private List<Map<String, String>> buildRegionOptions()
-    {
-        Set<String> regions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        regions.add("CN");
-        regions.add("US");
-        MonitorApp query = buildDataPermissionQuery();
-        List<MonitorApp> apps = monitorAppMapper.selectMonitorAppList(query);
-        if (apps != null)
-        {
-            for (MonitorApp app : apps)
-            {
-                if (StringUtils.isNotBlank(app.getRegion()))
-                {
-                    regions.add(app.getRegion().trim().toUpperCase());
-                }
-            }
-        }
-        List<Map<String, String>> options = new ArrayList<>();
-        for (String region : regions)
-        {
-            options.add(buildOption(region, region));
-        }
-        return options;
-    }
-
     private List<Map<String, String>> buildOwnerTypeOptions()
     {
         List<Map<String, String>> options = new ArrayList<>();
@@ -696,8 +688,48 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         MonitorApp exists = monitorAppMapper.selectMonitorAppByUniqueKey(monitorApp);
         if (exists != null && !exists.getId().equals(monitorApp.getId()))
         {
-            throw new ServiceException("App unique key conflict, please check whether bundleId + storePlatform + region is duplicated");
+            throw new ServiceException("App unique key conflict, please check whether appLink + storePlatform is duplicated");
         }
+    }
+
+    private String extractBundleId(MonitorApp monitorApp)
+    {
+        if (monitorApp != null && StringUtils.isNotBlank(monitorApp.getAppLink()))
+        {
+            return extractBundleIdFromAppLink(monitorApp.getAppLink());
+        }
+        return StringUtils.EMPTY;
+    }
+
+    private String extractBundleIdFromAppLink(String appLink)
+    {
+        try
+        {
+            URI uri = new URI(StringUtils.trim(appLink));
+            String query = uri.getRawQuery();
+            if (StringUtils.isNotBlank(query))
+            {
+                for (String pair : query.split("&"))
+                {
+                    String[] parts = pair.split("=", 2);
+                    if (parts.length == 2 && "id".equals(parts[0]) && StringUtils.isNotBlank(parts[1]))
+                    {
+                        return java.net.URLDecoder.decode(parts[1], StandardCharsets.UTF_8);
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            throw new ServiceException("Invalid app link format");
+        }
+        throw new ServiceException("Unable to extract bundleId from app link");
+    }
+
+    private String normalizeGooglePlayLink(String appLink)
+    {
+        String bundleId = extractBundleIdFromAppLink(appLink);
+        return buildGooglePlayUrl(bundleId);
     }
 
     private MonitorApp ensureMonitorAppExists(Long id)

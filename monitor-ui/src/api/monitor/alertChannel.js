@@ -8,6 +8,13 @@ export function listAlertChannel(query) {
   })
 }
 
+export function getAlertBindingInfo() {
+  return request({
+    url: "/monitor/alert/channel/telegram/bindingInfo",
+    method: "get"
+  })
+}
+
 export function addAlertChannel(data) {
   return request({
     url: "/monitor/alert/channel/telegram",

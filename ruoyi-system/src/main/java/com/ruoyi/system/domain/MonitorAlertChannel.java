@@ -69,8 +69,6 @@ public class MonitorAlertChannel extends BaseEntity
         this.name = name;
     }
 
-    @NotBlank(message = "Bot Token不能为空")
-    @Size(min = 0, max = 255, message = "Bot Token长度不能超过255个字符")
     public String getBotToken()
     {
         return botToken;

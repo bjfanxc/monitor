@@ -3,14 +3,14 @@ package com.ruoyi.system.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.annotation.Excel;
 import com.ruoyi.common.core.domain.BaseEntity;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
-
-import java.util.Date;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+import java.util.Date;
 
 /**
  * 应用监控对象 monitor_app
@@ -30,24 +30,20 @@ public class MonitorApp extends BaseEntity
     @Excel(name = "应用名称")
     private String appName;
 
-    /** 包名 */
-    @Excel(name = "包名 / Bundle ID")
-    private String bundleId;
+    /** 应用链接 */
+    @Excel(name = "应用链接")
+    private String appLink;
 
     /** 商店平台 */
-    @Excel(name = "商店平台")
+    // @Excel(name = "商店平台") // Import template intentionally hides this field.
     private String storePlatform;
 
-    /** 地区 */
-    @Excel(name = "地区")
-    private String region;
-
-    /** 所属类型 */
-    @Excel(name = "所属类型")
+    /** 告警配置 */
+    // @Excel(name = "告警配置") // Import template intentionally hides this field.
     private String ownerType;
 
     /** 状态：1上架 0下架 */
-    @Excel(name = "状态", readConverterExp = "1=上架,0=下架")
+    // @Excel(name = "状态", readConverterExp = "1=上架,0=下架") // Import template intentionally hides this field.
     private Integer status;
 
     /** 最近扫描时间 */
@@ -94,20 +90,20 @@ public class MonitorApp extends BaseEntity
         this.appName = appName;
     }
 
-    @NotBlank(message = "应用包名不能为空")
-    @Size(min = 0, max = 255, message = "应用包名长度不能超过255个字符")
-    public String getBundleId()
+    @NotBlank(message = "应用链接不能为空")
+    @Size(min = 0, max = 512, message = "应用链接长度不能超过512个字符")
+    public String getAppLink()
     {
-        return bundleId;
+        return appLink;
     }
 
-    public void setBundleId(String bundleId)
+    public void setAppLink(String appLink)
     {
-        this.bundleId = bundleId;
+        this.appLink = appLink;
     }
 
     @NotBlank(message = "商店平台不能为空")
-    @Size(min = 0, max = 32, message = "商店平台长度不能超过32个字符")
+    @Size(min = 0, max = 512, message = "商店平台长度不能超过512个字符")
     public String getStorePlatform()
     {
         return storePlatform;
@@ -118,20 +114,8 @@ public class MonitorApp extends BaseEntity
         this.storePlatform = storePlatform;
     }
 
-    @NotBlank(message = "地区不能为空")
-    @Size(min = 0, max = 16, message = "地区长度不能超过16个字符")
-    public String getRegion()
-    {
-        return region;
-    }
-
-    public void setRegion(String region)
-    {
-        this.region = region;
-    }
-
-    @NotBlank(message = "所属类型不能为空")
-    @Size(min = 0, max = 32, message = "所属类型长度不能超过32个字符")
+    @NotBlank(message = "告警配置不能为空")
+    @Size(min = 0, max = 32, message = "告警配置长度不能超过32个字符")
     public String getOwnerType()
     {
         return ownerType;
@@ -191,9 +175,8 @@ public class MonitorApp extends BaseEntity
             .append("id", getId())
             .append("productName", getProductName())
             .append("appName", getAppName())
-            .append("bundleId", getBundleId())
+            .append("appLink", getAppLink())
             .append("storePlatform", getStorePlatform())
-            .append("region", getRegion())
             .append("ownerType", getOwnerType())
             .append("status", getStatus())
             .append("lastScanTime", getLastScanTime())

@@ -1,11 +1,12 @@
 <template>
-  <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" label-width="68px">
+  <div class="app-container monitor-online-page">
+    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
       <el-form-item label="登录地址" prop="ipaddr">
         <el-input
           v-model="queryParams.ipaddr"
           placeholder="请输入登录地址"
           clearable
+          style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -14,6 +15,7 @@
           v-model="queryParams.userName"
           placeholder="请输入用户名称"
           clearable
+          style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -22,6 +24,10 @@
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
       </el-form-item>
 
+      <div class="query-toolbar">
+        <div class="query-toolbar__summary">在线用户列表</div>
+        <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
+      </div>
     </el-form>
     <el-table
       v-loading="loading"
@@ -71,13 +77,11 @@ export default {
     return {
       // 遮罩层
       loading: true,
-      // 总条数
+      showSearch: true,
       total: 0,
-      // 表格数据
       list: [],
       pageNum: 1,
       pageSize: 10,
-      // 查询参数
       queryParams: {
         ipaddr: undefined,
         userName: undefined
@@ -119,4 +123,23 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.query-toolbar {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(219, 228, 239, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.query-toolbar__summary {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+</style>
 
