@@ -1,5 +1,6 @@
 package com.ruoyi.web.controller.monitor;
 
+import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -69,6 +70,7 @@ public class MonitorAlertChannelController extends BaseController
         return success(data);
     }
 
+    @Anonymous
     @PostMapping("/webhook")
     public ResponseEntity<AjaxResult> webhook(@RequestBody(required = false) String payload,
                                               @RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secretToken)
