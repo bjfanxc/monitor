@@ -5,9 +5,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.ip.AddressUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
 import com.ruoyi.system.service.ISysConfigService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -34,6 +37,8 @@ import java.util.Map;
 @RequestMapping("/monitor/alert/channel/telegram")
 public class MonitorAlertChannelController extends BaseController
 {
+
+    private static final Logger log = LoggerFactory.getLogger(MonitorAlertChannelController.class);
     @Autowired
     private IMonitorAlertChannelService monitorAlertChannelService;
 
@@ -68,6 +73,7 @@ public class MonitorAlertChannelController extends BaseController
     public ResponseEntity<AjaxResult> webhook(@RequestBody(required = false) String payload,
                                               @RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secretToken)
     {
+        log.info("webhook payload={}, secret token={}", payload, secretToken);
         String configuredSecret = sysConfigService.selectConfigByKey("monitor.telegram.webhookSecret");
         if (configuredSecret != null && !configuredSecret.isEmpty() && !configuredSecret.equals(secretToken))
         {
