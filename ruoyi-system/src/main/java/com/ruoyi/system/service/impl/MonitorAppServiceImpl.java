@@ -166,7 +166,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         if (StringUtils.isNull(appList) || appList.isEmpty())
         {
-            throw new ServiceException("Import data cannot be empty");
+            throw new ServiceException("导入数据不能为空");
         }
         int successNum = 0;
         int failureNum = 0;
@@ -189,8 +189,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                     result.getImportedIds().add(monitorApp.getId());
                     result.getHandledIds().add(monitorApp.getId());
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append(". App ")
-                        .append(monitorApp.getProductName()).append(" imported successfully");
+                    successMsg.append("<br/>").append(successNum).append(". 产品 ")
+                        .append(monitorApp.getProductName()).append(" 导入成功");
                 }
                 else if (updateSupport)
                 {
@@ -201,31 +201,31 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                     result.getUpdatedIds().add(exists.getId());
                     result.getHandledIds().add(exists.getId());
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append(". App ")
-                        .append(monitorApp.getProductName()).append(" updated successfully");
+                    successMsg.append("<br/>").append(successNum).append(". 产品 ")
+                        .append(monitorApp.getProductName()).append(" 更新成功");
                 }
                 else
                 {
                     failureNum++;
-                    failureMsg.append("<br/>").append(failureNum).append(". App ")
+                    failureMsg.append("<br/>").append(failureNum).append(". 产品 ")
                         .append(monitorApp.getProductName())
-                        .append(" already exists, unique key appLink + storePlatform conflicts");
+                        .append(" 已存在，应用链接 + 商店平台 组合重复");
                 }
             }
             catch (Exception e)
             {
                 failureNum++;
-                String productName = StringUtils.isNotBlank(monitorApp.getProductName()) ? monitorApp.getProductName() : "Unnamed product";
-                failureMsg.append("<br/>").append(failureNum).append(". App ")
-                    .append(productName).append(" import failed: ").append(e.getMessage());
+                String productName = StringUtils.isNotBlank(monitorApp.getProductName()) ? monitorApp.getProductName() : "未命名产品";
+                failureMsg.append("<br/>").append(failureNum).append(". 产品 ")
+                    .append(productName).append(" 导入失败：").append(e.getMessage());
             }
         }
         if (failureNum > 0)
         {
-            failureMsg.insert(0, "Import failed, " + failureNum + " rows contain errors:");
+            failureMsg.insert(0, "导入失败，共 " + failureNum + " 条数据存在问题：");
             throw new ServiceException(failureMsg.toString());
         }
-        result.setMessage("Import succeeded, total " + successNum + " rows:" + successMsg);
+        result.setMessage("导入成功，共 " + successNum + " 条数据：" + successMsg);
         return result;
     }
 
@@ -520,23 +520,26 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private String buildTelegramAlertMessage(MonitorApp monitorApp, String statusText, String detailUrl, String detailMessage)
     {
-        String alertTitle = "OFFLINE".equals(statusText) ? "Google Play应用状态变更" : "Google Play应用状态恢复";
-        String statusLabel = "OFFLINE".equals(statusText) ? "离线 / 应用下架" : "在线 / 应用恢复";
+        String alertTitle = "OFFLINE".equals(statusText) ? "应用监控告警" : "应用恢复通知";
+        String statusLabel = "OFFLINE".equals(statusText) ? "异常 / 已下架" : "正常 / 已恢复";
         String productName = monitorApp == null ? StringUtils.EMPTY : StringUtils.defaultString(monitorApp.getProductName());
         String template = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY));
         if (StringUtils.isBlank(template))
         {
-            template = "<b>[${alertTitle}]</b>\n"
-                + "<b>状态</b><code>${statusLabel}</code>\n"
-                + "<b>产品</b>${productName}\n"
-                + "<b>链接</b><a href=\"${detailUrl}\">查看详情页</a>\n"
-                + "<b>结果</b>${detailMessage}";
+            template = "🚨🚨🚨 <b>${alertTitle}</b> 🚨🚨🚨\n"
+                + "━━━━━━━━━━━━━━━━━━\n"
+                + "🔴 <b>当前状态：</b><code>${statusLabel}</code>\n"
+                + "📦 <b>产品名称：</b>${productName}\n"
+                + "🔗 <b>详情链接：</b><a href=\"${detailUrl}\">打开 Google Play</a>\n"
+                + "📝 <b>异常说明：</b>${detailMessage}\n"
+                + "━━━━━━━━━━━━━━━━━━";
         }
         return template
             .replace("${alertTitle}", escapeHtml(alertTitle))
             .replace("${status}", escapeHtml(statusText))
             .replace("${statusLabel}", escapeHtml(statusLabel))
             .replace("${productName}", escapeHtml(productName))
+            .replace("${appName}", escapeHtml(productName))
             .replace("${detailUrl}", escapeHtmlAttribute(detailUrl))
             .replace("${detailMessage}", escapeHtml(detailMessage));
     }
