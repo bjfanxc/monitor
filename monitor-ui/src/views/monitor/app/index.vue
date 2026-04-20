@@ -260,6 +260,7 @@
         :disabled="upload.isUploading"
         :on-progress="handleFileUploadProgress"
         :on-success="handleFileSuccess"
+        :on-error="handleFileError"
         :auto-upload="false"
       >
         <i class="el-icon-upload"></i>
@@ -270,8 +271,8 @@
         </div>
       </el-upload>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitFileForm">确定</el-button>
-        <el-button @click="importOpen = false">取消</el-button>
+        <el-button type="primary" :loading="upload.isUploading" :disabled="upload.isUploading" @click="submitFileForm">确定</el-button>
+        <el-button :disabled="upload.isUploading" @click="importOpen = false">取消</el-button>
       </div>
     </el-dialog>
 
@@ -304,8 +305,8 @@
         />
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitAssign">确定</el-button>
-        <el-button @click="assignOpen = false">取消</el-button>
+        <el-button type="primary" :loading="assignSubmitting" :disabled="assignSubmitting" @click="submitAssign">确定</el-button>
+        <el-button :disabled="assignSubmitting" @click="assignOpen = false">取消</el-button>
       </div>
     </el-dialog>
   </div>
@@ -331,6 +332,7 @@ export default {
       open: false,
       importOpen: false,
       assignOpen: false,
+      assignSubmitting: false,
       title: "",
       assignTitle: "分配通知群组",
       alertChannelOptions: [],
@@ -510,10 +512,21 @@ export default {
       this.download("/monitor/app/importTemplate", {}, "monitor_app_template.xlsx")
     },
     submitFileForm() {
+      if (this.upload.isUploading) {
+        return
+      }
+      const files = this.$refs.upload && this.$refs.upload.uploadFiles
+      if (!files || files.length === 0) {
+        return
+      }
+      this.upload.isUploading = true
       this.$refs.upload.submit()
     },
     handleFileUploadProgress() {
       this.upload.isUploading = true
+    },
+    handleFileError() {
+      this.upload.isUploading = false
     },
     handleFileSuccess(response) {
       this.upload.isUploading = false
@@ -547,9 +560,14 @@ export default {
         channelIds: currentChannelIds
       }
       this.assignTitle = fromImport ? "导入完成，分配通知群组" : "分配通知群组"
+      this.assignSubmitting = false
       this.assignOpen = true
     },
     submitAssign() {
+      if (this.assignSubmitting) {
+        return
+      }
+      this.assignSubmitting = true
       assignAppAlertChannels({
         appIds: this.assignForm.appIds,
         channelIds: this.assignForm.channelIds
@@ -557,6 +575,9 @@ export default {
         this.$modal.msgSuccess("分配成功")
         this.assignOpen = false
         this.getList()
+      }).catch(() => {
+      }).finally(() => {
+        this.assignSubmitting = false
       })
     }
   }

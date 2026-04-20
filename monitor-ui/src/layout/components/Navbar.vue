@@ -103,9 +103,9 @@ export default {
       })
     },
     logout() {
-      this.$confirm("Confirm logout?", "Notice", {
-        confirmButtonText: "OK",
-        cancelButtonText: "Cancel",
+      this.$confirm("确认退出登录吗？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
         type: "warning"
       }).then(() => {
         this.$store.dispatch("LogOut").then(() => {
