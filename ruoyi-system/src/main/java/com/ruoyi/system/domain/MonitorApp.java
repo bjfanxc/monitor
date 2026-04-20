@@ -23,13 +23,13 @@ public class MonitorApp extends BaseEntity
 
     private Long id;
 
-    @Excel(name = "浜у搧鍚嶇О")
+    @Excel(name = "产品名称")
     private String productName;
 
-    @Excel(name = "搴旂敤閾炬帴")
+    @Excel(name = "应用链接")
     private String appLink;
 
-    @Excel(name = "鍟嗗簵骞冲彴")
+    @Excel(name = "商店平台")
     private String storePlatform;
 
     /**
@@ -66,8 +66,8 @@ public class MonitorApp extends BaseEntity
         this.id = id;
     }
 
-    @NotBlank(message = "浜у搧鍚嶇О涓嶈兘涓虹┖")
-    @Size(max = 100, message = "浜у搧鍚嶇О闀垮害涓嶈兘瓒呰繃100涓瓧绗?")
+    @NotBlank(message = "产品名称不能为空")
+    @Size(max = 100, message = "产品名称长度不能超过100个字符")
     public String getProductName()
     {
         return productName;
@@ -78,8 +78,8 @@ public class MonitorApp extends BaseEntity
         this.productName = productName;
     }
 
-    @NotBlank(message = "搴旂敤閾炬帴涓嶈兘涓虹┖")
-    @Size(max = 512, message = "搴旂敤閾炬帴闀垮害涓嶈兘瓒呰繃512涓瓧绗?")
+    @NotBlank(message = "应用链接不能为空")
+    @Size(max = 512, message = "应用链接长度不能超过512个字符")
     public String getAppLink()
     {
         return appLink;
@@ -90,8 +90,8 @@ public class MonitorApp extends BaseEntity
         this.appLink = appLink;
     }
 
-    @NotBlank(message = "鍟嗗簵骞冲彴涓嶈兘涓虹┖")
-    @Size(max = 64, message = "鍟嗗簵骞冲彴闀垮害涓嶈兘瓒呰繃64涓瓧绗?")
+    @NotBlank(message = "商店平台不能为空")
+    @Size(max = 64, message = "商店平台长度不能超过64个字符")
     public String getStorePlatform()
     {
         return storePlatform;
@@ -102,7 +102,7 @@ public class MonitorApp extends BaseEntity
         this.storePlatform = storePlatform;
     }
 
-    @Size(max = 32, message = "鍛婅閰嶇疆闀垮害涓嶈兘瓒呰繃32涓瓧绗?")
+    @Size(max = 32, message = "渠道来源长度不能超过32个字符")
     public String getOwnerType()
     {
         return ownerType;
@@ -113,8 +113,8 @@ public class MonitorApp extends BaseEntity
         this.ownerType = ownerType;
     }
 
-    @Min(value = 0, message = "搴旂敤鐘舵€佸彧鑳戒负0鎴?")
-    @Max(value = 1, message = "搴旂敤鐘舵€佸彧鑳戒负0鎴?")
+    @Min(value = 0, message = "应用状态只能是0或1")
+    @Max(value = 1, message = "应用状态只能是0或1")
     public Integer getStatus()
     {
         return status;

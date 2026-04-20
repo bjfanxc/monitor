@@ -11,8 +11,6 @@ public class MonitorAppScanResultVo
 {
     private Long id;
     private String productName;
-    private String bundleId;
-    private String region;
     private String scanMode;
     private Integer previousStatus;
     private Integer currentStatus;
@@ -28,10 +26,6 @@ public class MonitorAppScanResultVo
     public void setId(Long id) { this.id = id; }
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
-    public String getBundleId() { return bundleId; }
-    public void setBundleId(String bundleId) { this.bundleId = bundleId; }
-    public String getRegion() { return region; }
-    public void setRegion(String region) { this.region = region; }
     public String getScanMode() { return scanMode; }
     public void setScanMode(String scanMode) { this.scanMode = scanMode; }
     public Integer getPreviousStatus() { return previousStatus; }

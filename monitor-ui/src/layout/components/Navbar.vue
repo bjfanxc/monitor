@@ -25,16 +25,16 @@
         </div>
         <el-dropdown-menu slot="dropdown">
           <router-link to="/user/profile">
-            <el-dropdown-item>Profile</el-dropdown-item>
+            <el-dropdown-item>个人中心</el-dropdown-item>
           </router-link>
           <el-dropdown-item v-if="setting" @click.native="setLayout">
-            <span>Layout</span>
+            <span>布局设置</span>
           </el-dropdown-item>
           <el-dropdown-item @click.native="lockScreen">
-            <span>Lock</span>
+            <span>锁定屏幕</span>
           </el-dropdown-item>
           <el-dropdown-item divided @click.native="logout">
-            <span>Logout</span>
+            <span>退出登录</span>
           </el-dropdown-item>
         </el-dropdown-menu>
       </el-dropdown>

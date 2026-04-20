@@ -2,18 +2,18 @@
   <div class="app-container dashboard-page" v-loading="loading">
     <section class="hero-panel">
       <div class="hero-panel__content">
-        <div class="hero-panel__eyebrow">监控驾驶舱</div>
+        <div class="hero-panel__eyebrow">MONITOR CONSOLE</div>
         <h1 class="hero-panel__title">{{ welcomeTitle }}</h1>
         <p class="hero-panel__summary">
           当前共监控 <strong>{{ stats.totalApps }}</strong> 个应用，其中
-          <strong class="ok">{{ stats.onlineApps }}</strong> 个正常，
-          <strong class="danger">{{ stats.offlineApps }}</strong> 个异常，
-          今日已产生 <strong>{{ stats.todayAlerts }}</strong> 条告警。
+          <strong class="ok">{{ stats.onlineApps }}</strong> 个状态正常，
+          <strong class="danger">{{ stats.offlineApps }}</strong> 个需要关注，
+          今日新增 <strong>{{ stats.todayAlerts }}</strong> 条告警。
         </p>
         <div class="hero-panel__actions">
-          <el-button type="danger" icon="el-icon-warning-outline" size="mini" @click="goTo('/monitor/alert')">查看告警</el-button>
-          <el-button type="primary" plain icon="el-icon-monitor" size="mini" @click="goTo('/monitor/app')">查看应用</el-button>
-          <el-button type="info" plain icon="el-icon-s-operation" size="mini" @click="goTo('/monitor/job')">查看任务</el-button>
+          <el-button type="danger" icon="el-icon-warning-outline" size="mini" @click="goTo('/appMonitor/monitorRecord')">查看告警</el-button>
+          <el-button type="primary" plain icon="el-icon-monitor" size="mini" @click="goTo('/appMonitor/monitorApp')">查看应用</el-button>
+          <el-button type="success" plain icon="el-icon-message-solid" size="mini" @click="goTo('/appMonitor/alertChannel')">告警配置</el-button>
         </div>
       </div>
       <div class="hero-panel__side">
@@ -29,7 +29,7 @@
         />
         <div class="hero-panel__tips">
           <span>最近告警 {{ alerts.length }} 条</span>
-          <span>最近失败任务 {{ stats.failedJobs }} 条</span>
+          <span>平台数量 {{ platformStats.length }} 个</span>
         </div>
       </div>
     </section>
@@ -54,7 +54,7 @@
         <el-card shadow="hover" class="dashboard-card">
           <div slot="header" class="dashboard-card__header">
             <span>最新告警</span>
-            <el-button type="text" @click="goTo('/monitor/alert')">查看更多</el-button>
+            <el-button type="text" @click="goTo('/appMonitor/monitorRecord')">查看更多</el-button>
           </div>
           <div v-if="alerts.length === 0" class="empty-state">暂无告警记录</div>
           <div v-else class="table-list">
@@ -82,30 +82,6 @@
       <el-col :xs="24" :lg="10">
         <el-card shadow="hover" class="dashboard-card">
           <div slot="header" class="dashboard-card__header">
-            <span>最近调度结果</span>
-            <el-button type="text" @click="goTo('/monitor/job')">查看任务</el-button>
-          </div>
-          <div v-if="jobLogs.length === 0" class="empty-state">暂无调度日志</div>
-          <div v-else class="job-list">
-            <div v-for="item in jobLogs" :key="item.jobLogId" class="job-list__row">
-              <div class="job-list__title">{{ item.jobName || "-" }}</div>
-              <div class="job-list__meta">
-                <el-tag size="mini" :type="jobStatusType(item.status)">
-                  {{ jobStatusLabel(item.status) }}
-                </el-tag>
-                <span>{{ parseTime(item.createTime) }}</span>
-              </div>
-              <div class="job-list__message">{{ item.jobMessage || item.invokeTarget || "-" }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16" class="panel-row">
-      <el-col :xs="24" :lg="10">
-        <el-card shadow="hover" class="dashboard-card">
-          <div slot="header" class="dashboard-card__header">
             <span>平台分布</span>
             <span class="dashboard-card__sub">按已配置监控应用统计</span>
           </div>
@@ -126,8 +102,10 @@
           </div>
         </el-card>
       </el-col>
+    </el-row>
 
-      <el-col :xs="24" :lg="14">
+    <el-row :gutter="16" class="panel-row">
+      <el-col :span="24">
         <el-card shadow="hover" class="dashboard-card">
           <div slot="header" class="dashboard-card__header">
             <span>快捷入口</span>
@@ -158,7 +136,6 @@
 import { mapGetters } from "vuex"
 import { getAppOverview, listApp } from "@/api/monitor/app"
 import { listAlert } from "@/api/monitor/alert"
-import { listJobLog } from "@/api/monitor/jobLog"
 
 export default {
   name: "Index",
@@ -204,7 +181,7 @@ export default {
           key: "alerts",
           label: "今日告警数",
           value: this.stats.todayAlerts,
-          desc: `最近失败任务 ${this.stats.failedJobs} 条`,
+          desc: "根据最近告警记录自动统计",
           icon: "el-icon-bell",
           theme: "theme-warning"
         }
@@ -218,19 +195,14 @@ export default {
         totalApps: 0,
         onlineApps: 0,
         offlineApps: 0,
-        todayAlerts: 0,
-        failedJobs: 0
+        todayAlerts: 0
       },
       alerts: [],
-      jobLogs: [],
       platformStats: [],
       shortcuts: [
-        { title: "应用监控", desc: "查看和维护监控应用", path: "/monitor/app", icon: "el-icon-monitor" },
-        { title: "告警配置", desc: "管理 Telegram 告警渠道", path: "/monitor/alertChannel", icon: "el-icon-message-solid" },
-        { title: "告警记录", desc: "查看最新异常通知", path: "/monitor/alert", icon: "el-icon-warning-outline" },
-        { title: "定时任务", desc: "管理扫描任务计划", path: "/monitor/job", icon: "el-icon-date" },
-        { title: "调度日志", desc: "排查任务执行失败原因", path: "/monitor/job-log/index/0", icon: "el-icon-s-operation" },
-        { title: "在线用户", desc: "查看当前登录会话", path: "/monitor/online", icon: "el-icon-user" }
+        { title: "应用监控", desc: "查看和维护监控应用", path: "/appMonitor/monitorApp", icon: "el-icon-monitor" },
+        { title: "告警记录", desc: "查看最新异常通知", path: "/appMonitor/monitorRecord", icon: "el-icon-warning-outline" },
+        { title: "告警配置", desc: "管理告警群组与通知方式", path: "/appMonitor/alertChannel", icon: "el-icon-message-solid" }
       ]
     }
   },
@@ -241,10 +213,9 @@ export default {
     async loadDashboard() {
       this.loading = true
       try {
-        const [overviewRes, alertRes, jobLogRes, appRes] = await Promise.allSettled([
+        const [overviewRes, alertRes, appRes] = await Promise.allSettled([
           getAppOverview(),
           listAlert({ pageNum: 1, pageSize: 8 }),
-          listJobLog({ pageNum: 1, pageSize: 6 }),
           listApp({ pageNum: 1, pageSize: 200 })
         ])
 
@@ -259,12 +230,6 @@ export default {
           const rows = alertRes.value.rows || []
           this.alerts = rows
           this.stats.todayAlerts = rows.filter(item => this.isToday(item.alertTime)).length
-        }
-
-        if (jobLogRes.status === "fulfilled") {
-          const rows = jobLogRes.value.rows || []
-          this.jobLogs = rows
-          this.stats.failedJobs = rows.filter(item => !this.isJobSuccess(item.status)).length
         }
 
         if (appRes.status === "fulfilled") {
@@ -342,15 +307,6 @@ export default {
         && current.getMonth() === target.getMonth()
         && current.getDate() === target.getDate()
     },
-    isJobSuccess(status) {
-      return String(status) === "0"
-    },
-    jobStatusLabel(status) {
-      return this.isJobSuccess(status) ? "成功" : "失败"
-    },
-    jobStatusType(status) {
-      return this.isJobSuccess(status) ? "success" : "danger"
-    },
     goTo(path) {
       this.$router.push(path)
     }
@@ -419,28 +375,25 @@ export default {
 }
 
 .hero-panel__actions {
-  margin-top: 22px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .hero-panel__side {
   width: 280px;
-  flex-shrink: 0;
-  align-self: stretch;
-  padding: 22px 20px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
+  padding: 24px 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .hero-metric {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
 .hero-metric__label {
@@ -560,20 +513,17 @@ export default {
   font-size: 13px;
 }
 
-.table-list__row,
-.job-list__row {
+.table-list__row {
   padding: 14px 0;
   border-bottom: 1px solid #eef2f7;
 }
 
-.table-list__row:last-child,
-.job-list__row:last-child {
+.table-list__row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
 .table-list__title,
-.job-list__meta,
 .platform-list__head {
   display: flex;
   justify-content: space-between;
@@ -587,28 +537,22 @@ export default {
 }
 
 .table-list__meta,
-.table-list__extra,
-.job-list__message,
-.job-list__title {
+.table-list__extra {
   margin-top: 6px;
 }
 
-.table-list__meta,
-.job-list__meta {
+.table-list__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   color: #64748b;
   font-size: 12px;
 }
 
-.table-list__extra,
-.job-list__message {
+.table-list__extra {
   color: #475569;
   font-size: 13px;
   line-height: 1.6;
-}
-
-.job-list__title {
-  font-weight: 600;
-  color: #0f172a;
 }
 
 .platform-list__row {
@@ -681,6 +625,10 @@ export default {
   .hero-panel__side {
     width: 100%;
   }
+
+  .shortcut-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 767px) {
@@ -698,7 +646,7 @@ export default {
   }
 
   .shortcut-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
 </style>

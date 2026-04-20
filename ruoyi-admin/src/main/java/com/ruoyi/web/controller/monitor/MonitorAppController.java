@@ -103,7 +103,7 @@ public class MonitorAppController extends BaseController
     public void importTemplate(HttpServletResponse response)
     {
         ExcelUtil<MonitorApp> util = new ExcelUtil<>(MonitorApp.class);
-        util.importTemplateExcel(response, "应用监控导入模板");
+        util.importTemplateExcel(response, "应用监控导入模版");
     }
 
     @PreAuthorize("@ss.hasPermi('monitor:app:remove')")

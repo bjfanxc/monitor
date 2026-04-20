@@ -341,7 +341,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         MonitorAppScanResultVo result = new MonitorAppScanResultVo();
         result.setId(monitorApp.getId());
         result.setProductName(monitorApp.getProductName());
-        result.setBundleId(extractBundleId(monitorApp));
         result.setScanMode(scanMode);
         result.setPreviousStatus(previousStatus);
         result.setCurrentStatus(currentStatus);
@@ -364,7 +363,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private ScanOutcome fetchGooglePlayStatusByHttp(MonitorApp monitorApp)
     {
-        String detailUrl = resolveGooglePlayUrl(monitorApp);
+        String detailUrl = normalizeGooglePlayDetailLink(monitorApp.getAppLink());
         try
         {
             HttpRequest request = HttpRequest.newBuilder()
@@ -379,7 +378,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             {
                 return ScanOutcome.offline("HTTP模式：Google Play返回" + response.statusCode());
             }
-            return evaluateGooglePlayDocument(response.body(), extractBundleId(monitorApp), SCAN_MODE_HTTP);
+            return evaluateGooglePlayDocument(response.body(), detailUrl, SCAN_MODE_HTTP);
         }
         catch (Exception e)
         {
@@ -389,7 +388,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private ScanOutcome fetchGooglePlayStatusByPlaywright(MonitorApp monitorApp)
     {
-        String detailUrl = resolveGooglePlayUrl(monitorApp);
+        String detailUrl = normalizeGooglePlayDetailLink(monitorApp.getAppLink());
         try (Playwright playwright = Playwright.create();
              Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true)))
         {
@@ -402,7 +401,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             page.navigate(detailUrl, options);
             page.waitForTimeout(1500);
             String html = page.content();
-            return evaluateGooglePlayDocument(html, extractBundleId(monitorApp), SCAN_MODE_PLAYWRIGHT);
+            return evaluateGooglePlayDocument(html, detailUrl, SCAN_MODE_PLAYWRIGHT);
         }
         catch (Exception e)
         {
@@ -410,15 +409,15 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
     }
 
-    private ScanOutcome evaluateGooglePlayDocument(String body, String bundleId, String scanMode)
+    private ScanOutcome evaluateGooglePlayDocument(String body, String detailUrl, String scanMode)
     {
         String content = StringUtils.defaultString(body);
         String modePrefix = SCAN_MODE_PLAYWRIGHT.equals(scanMode) ? "Playwright模式" : "HTTP模式";
         if (containsOfflineMarker(content))
         {
-            return ScanOutcome.offline(modePrefix + "：Google Play页面不存在或当前区域不可见");
+            return ScanOutcome.offline(modePrefix + "：Google Play页面不存在或当前区域不可用");
         }
-        if (containsOnlineMarker(content, bundleId))
+        if (containsOnlineMarker(content, detailUrl))
         {
             return ScanOutcome.online(modePrefix + "：Google Play页面可访问");
         }
@@ -429,7 +428,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         String alertType = currentStatus != null && currentStatus == 1 ? ALERT_TYPE_ONLINE : ALERT_TYPE_OFFLINE;
         String statusText = currentStatus != null && currentStatus == 1 ? "ONLINE" : "OFFLINE";
-        String detailUrl = resolveGooglePlayUrl(monitorApp);
+        String detailUrl = monitorApp.getAppLink();
         String alertMessage = detailMessage;
         String logMessage = String.format("[MonitorAlert] product=%s, appId=%s, alertType=%s, status=%s, url=%s, detail=%s",
             monitorApp.getProductName(),
@@ -516,23 +515,22 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             return globalToken;
         }
-        // Keep backward compatibility with old per-channel token data until system config is filled.
         return channel == null ? StringUtils.EMPTY : StringUtils.trim(channel.getBotToken());
     }
 
     private String buildTelegramAlertMessage(MonitorApp monitorApp, String statusText, String detailUrl, String detailMessage)
     {
-        String alertTitle = "OFFLINE".equals(statusText) ? "搴旂敤涓嬫灦鍛婅" : "搴旂敤鎭㈠閫氱煡";
-        String statusLabel = "OFFLINE".equals(statusText) ? "涓嬫灦/涓嶅彲璁块棶" : "宸叉仮澶?鍙闂?";
+        String alertTitle = "OFFLINE".equals(statusText) ? "Google Play应用状态变更" : "Google Play应用状态恢复";
+        String statusLabel = "OFFLINE".equals(statusText) ? "离线 / 应用下架" : "在线 / 应用恢复";
         String productName = monitorApp == null ? StringUtils.EMPTY : StringUtils.defaultString(monitorApp.getProductName());
         String template = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY));
         if (StringUtils.isBlank(template))
         {
             template = "<b>[${alertTitle}]</b>\n"
-                + "<b>褰撳墠鐘舵€侊細</b><code>${statusLabel}</code>\n"
-                + "<b>浜у搧锛?/b>${productName}\n"
-                + "<b>鍟嗗簵閾炬帴锛?/b><a href=\"${detailUrl}\">绔嬪嵆鏌ョ湅</a>\n"
-                + "<b>寮傚父璇存槑锛?/b>${detailMessage}";
+                + "<b>状态</b><code>${statusLabel}</code>\n"
+                + "<b>产品</b>${productName}\n"
+                + "<b>链接</b><a href=\"${detailUrl}\">查看详情页</a>\n"
+                + "<b>结果</b>${detailMessage}";
         }
         return template
             .replace("${alertTitle}", escapeHtml(alertTitle))
@@ -566,20 +564,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             GOOGLE_PLAY_STORE, "google-play", "googleplay", "Google Play");
     }
 
-    private String buildGooglePlayUrl(String bundleId)
-    {
-        return "https://play.google.com/store/apps/details?id=" + urlEncode(bundleId) + "&hl=en_US&gl=US";
-    }
-
-    private String resolveGooglePlayUrl(MonitorApp monitorApp)
-    {
-        if (monitorApp != null && StringUtils.isNotBlank(monitorApp.getAppLink()))
-        {
-            return normalizeGooglePlayLink(monitorApp.getAppLink());
-        }
-        return buildGooglePlayUrl(extractBundleId(monitorApp));
-    }
-
     private String urlEncode(String value)
     {
         return URLEncoder.encode(StringUtils.defaultString(value), StandardCharsets.UTF_8);
@@ -596,12 +580,17 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             "url was not found on this server");
     }
 
-    private boolean containsOnlineMarker(String body, String bundleId)
+    private boolean containsOnlineMarker(String body, String detailUrl)
     {
+        String normalizedUrl = normalizeGooglePlayDetailLink(detailUrl);
+        String plainUrl = normalizeGooglePlayDetailLinkWithoutLocale(normalizedUrl);
+        String escapedUrl = escapeGooglePlayUrl(normalizedUrl);
+        String escapedPlainUrl = escapeGooglePlayUrl(plainUrl);
         return StringUtils.containsAnyIgnoreCase(body,
-            "\"appId\":\"" + bundleId + "\"",
-            "\"androidAppPackageName\":\"" + bundleId + "\"",
-            "play.google.com/store/apps/details?id=" + bundleId,
+            normalizedUrl,
+            plainUrl,
+            escapedUrl,
+            escapedPlainUrl,
             "\"name\":\"Install\"",
             "\"name\":\"Update\"",
             "\"install\"",
@@ -645,7 +634,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         monitorApp.setStorePlatform(StringUtils.trim(monitorApp.getStorePlatform()));
         if (StringUtils.isNotBlank(monitorApp.getAppLink()) && isGooglePlayApp(monitorApp))
         {
-            monitorApp.setAppLink(normalizeGooglePlayLink(monitorApp.getAppLink()));
+            monitorApp.setAppLink(normalizeGooglePlayDetailLink(monitorApp.getAppLink()));
         }
         monitorApp.setOwnerType(StringUtils.trim(monitorApp.getOwnerType()));
     }
@@ -656,7 +645,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             return;
         }
-        // Import template intentionally hides these fields, so defaults are applied here.
         if (StringUtils.isBlank(monitorApp.getStorePlatform()))
         {
             monitorApp.setStorePlatform(GOOGLE_PLAY_STORE);
@@ -685,32 +673,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         return options;
     }
 
-/*    private List<Map<String, String>> buildAlertChannelOptions()
-    {
-        List<Map<String, String>> options = new ArrayList<>();
-        String username = SecurityUtils.getUsername();
-        if (StringUtils.isBlank(username))
-        {
-            return options;
-        }
-        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAlertChannelsByCreateBy(username);
-        if (channels == null)
-        {
-            return options;
-        }
-        for (MonitorAlertChannel channel : channels)
-        {
-            String label = channel.getName();
-            if (channel.getEnabled() != null && channel.getEnabled() == 0)
-            {
-                label = label + "锛堝凡鍋滅敤锛?;
-            }
-            options.add(buildOption(label, String.valueOf(channel.getId())));
-        }
-        return options;
-    }
-
-*/
     private List<Map<String, String>> buildAlertChannelOptions()
     {
         List<Map<String, String>> options = new ArrayList<>();
@@ -744,27 +706,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         return option;
     }
 
-/*    private void fillAlertChannelData(List<MonitorApp> list)
-    {
-        if (list == null || list.isEmpty())
-        {
-            return;
-        }
-        for (MonitorApp app : list)
-        {
-            List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAssignedChannelsByAppId(app.getId());
-            if (channels == null || channels.isEmpty())
-            {
-                app.setAlertChannelIds(new ArrayList<>());
-                app.setAlertChannelNames(StringUtils.EMPTY);
-                continue;
-            }
-            app.setAlertChannelIds(channels.stream().map(MonitorAlertChannel::getId).collect(Collectors.toList()));
-            app.setAlertChannelNames(channels.stream().map(MonitorAlertChannel::getName).collect(Collectors.joining("銆?)));
-        }
-    }
-
-*/
     private void fillAlertChannelData(List<MonitorApp> list)
     {
         if (list == null || list.isEmpty())
@@ -851,44 +792,94 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
     }
 
-    private String extractBundleId(MonitorApp monitorApp)
-    {
-        if (monitorApp != null && StringUtils.isNotBlank(monitorApp.getAppLink()))
-        {
-            return extractBundleIdFromAppLink(monitorApp.getAppLink());
-        }
-        return StringUtils.EMPTY;
-    }
-
-    private String extractBundleIdFromAppLink(String appLink)
+    private String normalizeGooglePlayDetailLink(String appLink)
     {
         try
         {
             URI uri = new URI(StringUtils.trim(appLink));
+            String host = StringUtils.defaultString(uri.getHost()).toLowerCase();
+            String path = StringUtils.defaultString(uri.getPath());
+            if (!host.contains("play.google.com") || !"/store/apps/details".equals(path))
+            {
+                throw new ServiceException("Google Play应用链接格式不正确，请使用应用详情页链接");
+            }
+
             String query = uri.getRawQuery();
+            String appId = null;
+            String language = null;
+            String country = null;
             if (StringUtils.isNotBlank(query))
             {
                 for (String pair : query.split("&"))
                 {
                     String[] parts = pair.split("=", 2);
-                    if (parts.length == 2 && "id".equals(parts[0]) && StringUtils.isNotBlank(parts[1]))
+                    if (parts.length != 2 || StringUtils.isBlank(parts[1]))
                     {
-                        return java.net.URLDecoder.decode(parts[1], StandardCharsets.UTF_8);
+                        continue;
+                    }
+                    String key = parts[0];
+                    String value = java.net.URLDecoder.decode(parts[1], StandardCharsets.UTF_8);
+                    if ("id".equals(key) && StringUtils.isNotBlank(value))
+                    {
+                        appId = value;
+                    }
+                    else if ("hl".equals(key) && StringUtils.isNotBlank(value))
+                    {
+                        language = value;
+                    }
+                    else if ("gl".equals(key) && StringUtils.isNotBlank(value))
+                    {
+                        country = value;
                     }
                 }
             }
+
+            if (StringUtils.isBlank(appId))
+            {
+                throw new ServiceException("Google Play应用链接缺少应用ID，请使用完整的详情页链接");
+            }
+
+            StringBuilder normalized = new StringBuilder("https://play.google.com/store/apps/details?id=")
+                .append(urlEncode(appId));
+            if (StringUtils.isNotBlank(language))
+            {
+                normalized.append("&hl=").append(urlEncode(language));
+            }
+            if (StringUtils.isNotBlank(country))
+            {
+                normalized.append("&gl=").append(urlEncode(country));
+            }
+            return normalized.toString();
         }
         catch (Exception e)
         {
+            if (e instanceof ServiceException)
+            {
+                throw (ServiceException) e;
+            }
             throw new ServiceException("Google Play应用链接格式不正确，请使用应用详情页链接");
         }
-        throw new ServiceException("Google Play应用链接缺少应用ID，请使用完整的详情页链接");
     }
 
-    private String normalizeGooglePlayLink(String appLink)
+    private String normalizeGooglePlayDetailLinkWithoutLocale(String detailUrl)
     {
-        String bundleId = extractBundleIdFromAppLink(appLink);
-        return buildGooglePlayUrl(bundleId);
+        String normalized = normalizeGooglePlayDetailLink(detailUrl);
+        int localeIndex = normalized.indexOf("&hl=");
+        if (localeIndex >= 0)
+        {
+            normalized = normalized.substring(0, localeIndex);
+        }
+        int countryIndex = normalized.indexOf("&gl=");
+        if (countryIndex >= 0)
+        {
+            normalized = normalized.substring(0, countryIndex);
+        }
+        return normalized;
+    }
+
+    private String escapeGooglePlayUrl(String detailUrl)
+    {
+        return normalizeGooglePlayDetailLink(detailUrl).replace("&", "&amp;");
     }
 
     private MonitorApp ensureMonitorAppExists(Long id)
