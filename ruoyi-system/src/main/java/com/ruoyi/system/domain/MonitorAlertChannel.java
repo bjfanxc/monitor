@@ -1,40 +1,34 @@
 package com.ruoyi.system.domain;
 
 import com.ruoyi.common.core.domain.BaseEntity;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
-
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 /**
- * 告警渠道对象 monitor_alert_channel
+ * Alert channel entity.
  */
 public class MonitorAlertChannel extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 主键 */
     private Long id;
 
-    /** 渠道类型 */
     private String channelType;
 
-    /** 渠道名称 */
+    private String accessMode;
+
     private String name;
 
-    /** Telegram Bot Token */
     private String botToken;
 
-    /** Telegram Chat ID */
     private String chatId;
 
-    /** 启用状态：1启用 0禁用 */
     private Integer enabled;
 
-    /** 删除标记 */
     private String delFlag;
 
     public Long getId()
@@ -57,8 +51,20 @@ public class MonitorAlertChannel extends BaseEntity
         this.channelType = channelType;
     }
 
+    @NotBlank(message = "添加方式不能为空")
+    @Size(max = 32, message = "添加方式长度不能超过32个字符")
+    public String getAccessMode()
+    {
+        return accessMode;
+    }
+
+    public void setAccessMode(String accessMode)
+    {
+        this.accessMode = accessMode;
+    }
+
     @NotBlank(message = "渠道名称不能为空")
-    @Size(min = 0, max = 100, message = "渠道名称长度不能超过100个字符")
+    @Size(max = 100, message = "渠道名称长度不能超过100个字符")
     public String getName()
     {
         return name;
@@ -69,6 +75,7 @@ public class MonitorAlertChannel extends BaseEntity
         this.name = name;
     }
 
+    @Size(max = 255, message = "机器人 Token 长度不能超过255个字符")
     public String getBotToken()
     {
         return botToken;
@@ -79,8 +86,8 @@ public class MonitorAlertChannel extends BaseEntity
         this.botToken = botToken;
     }
 
-    @NotBlank(message = "Chat ID不能为空")
-    @Size(min = 0, max = 64, message = "Chat ID长度不能超过64个字符")
+    @NotBlank(message = "群组 Chat ID 不能为空")
+    @Size(max = 64, message = "群组 Chat ID 长度不能超过64个字符")
     public String getChatId()
     {
         return chatId;
@@ -119,6 +126,7 @@ public class MonitorAlertChannel extends BaseEntity
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
             .append("channelType", getChannelType())
+            .append("accessMode", getAccessMode())
             .append("name", getName())
             .append("botToken", getBotToken())
             .append("chatId", getChatId())

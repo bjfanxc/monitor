@@ -61,7 +61,7 @@
             <div v-for="item in alerts" :key="item.id" class="table-list__row">
               <div class="table-list__main">
                 <div class="table-list__title">
-                  <span>{{ item.productName || "-" }} / {{ item.appName || "-" }}</span>
+                  <span>{{ item.productName || "-" }}</span>
                   <el-tag size="mini" :type="alertTagType(item.alertType)">
                     {{ alertTypeLabel(item.alertType) }}
                   </el-tag>

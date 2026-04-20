@@ -1,10 +1,10 @@
 <template>
   <div class="app-container monitor-alert-page">
     <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
-      <el-form-item label="关键字" prop="keyword">
+      <el-form-item label="关键词" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
-          placeholder="请输入产品名称、应用名称或应用链接"
+          placeholder="请输入产品名称或应用链接"
           clearable
           style="width: 320px"
           @keyup.enter.native="handleQuery"
@@ -41,21 +41,19 @@
 
     <el-table v-loading="loading" :data="alertList">
       <el-table-column label="ID" align="center" prop="id" width="80" />
-      <el-table-column label="产品名称" align="center" prop="productName" min-width="140" :show-overflow-tooltip="true" />
-      <el-table-column label="应用名称" align="center" prop="appName" min-width="160" :show-overflow-tooltip="true" />
+      <el-table-column label="产品名称" align="center" prop="productName" min-width="160" :show-overflow-tooltip="true" />
       <el-table-column label="应用链接" align="center" prop="appLink" min-width="260" :show-overflow-tooltip="true" />
-      <el-table-column label="平台" align="center" prop="storePlatform" width="120" />
+      <el-table-column label="平台" align="center" prop="storePlatform" width="120">
+        <template slot-scope="scope">
+          <span>{{ storePlatformLabel(scope.row.storePlatform) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="渠道" align="center" prop="channelType" width="120" />
       <el-table-column label="类型" align="center" prop="alertType" width="140" />
-      <el-table-column label="告警内容" align="center" prop="alertMessage" min-width="240" :show-overflow-tooltip="true" />
+      <el-table-column label="告警内容" align="center" prop="alertMessage" min-width="260" :show-overflow-tooltip="true" />
       <el-table-column label="告警时间" align="center" prop="alertTime" width="160">
         <template slot-scope="scope">
           <span>{{ parseTime(scope.row.alertTime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="扩展信息" align="center" min-width="200">
-        <template slot-scope="scope">
-          <span class="ext-json">{{ scope.row.extJson || "-" }}</span>
         </template>
       </el-table-column>
     </el-table>
@@ -75,6 +73,7 @@ import { listAlert } from "@/api/monitor/alert"
 
 export default {
   name: "MonitorAlert",
+  dicts: ["monitor_store_type"],
   data() {
     return {
       loading: false,
@@ -94,11 +93,15 @@ export default {
     this.getList()
   },
   methods: {
+    storePlatformLabel(value) {
+      const target = (this.dict.type.monitor_store_type || []).find(item => item.value === value)
+      return target ? target.label : value
+    },
     getList() {
       this.loading = true
       listAlert(this.queryParams).then(response => {
-        this.alertList = response.rows
-        this.total = response.total
+        this.alertList = response.rows || []
+        this.total = response.total || 0
         this.loading = false
       }).catch(() => {
         this.loading = false
@@ -132,12 +135,5 @@ export default {
   color: #64748b;
   font-size: 13px;
   font-weight: 600;
-}
-
-.ext-json {
-  display: inline-block;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: #606266;
 }
 </style>

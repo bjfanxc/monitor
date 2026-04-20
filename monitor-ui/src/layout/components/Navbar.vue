@@ -5,42 +5,36 @@
     <breadcrumb v-if="navType == 1" id="breadcrumb-container" class="breadcrumb-container" />
     <top-nav v-if="navType == 2" id="topmenu-container" class="topmenu-container" />
     <template v-if="navType == 3">
-      <logo v-show="showLogo" :collapse="false"></logo>
+      <logo v-show="showLogo" :collapse="false" />
       <top-bar id="topbar-container" class="topbar-container" />
     </template>
-    <div class="right-menu">
-      <template v-if="device!=='mobile'">
-        <search id="header-search" class="right-menu-item" />
 
+    <div class="right-menu">
+      <template v-if="device !== 'mobile'">
         <screenfull id="screenfull" class="right-menu-item hover-effect" />
 
-        <el-tooltip content="布局大小" effect="dark" placement="bottom">
-          <size-select id="size-select" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
-        <el-tooltip content="消息通知" effect="dark" placement="bottom">
+        <el-tooltip content="Notifications" effect="dark" placement="bottom">
           <header-notice id="header-notice" class="right-menu-item hover-effect" />
         </el-tooltip>
-
       </template>
 
       <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="hover">
         <div class="avatar-wrapper">
-          <img :src="avatar" class="user-avatar">
-          <span class="user-nickname"> {{ nickName }} </span>
+          <span class="user-avatar user-avatar--initial">{{ nickNameInitial }}</span>
+          <span class="user-nickname">{{ nickName }}</span>
         </div>
         <el-dropdown-menu slot="dropdown">
           <router-link to="/user/profile">
-            <el-dropdown-item>个人中心</el-dropdown-item>
+            <el-dropdown-item>Profile</el-dropdown-item>
           </router-link>
-          <el-dropdown-item @click.native="setLayout" v-if="setting">
-            <span>布局设置</span>
+          <el-dropdown-item v-if="setting" @click.native="setLayout">
+            <span>Layout</span>
           </el-dropdown-item>
           <el-dropdown-item @click.native="lockScreen">
-            <span>锁定屏幕</span>
+            <span>Lock</span>
           </el-dropdown-item>
           <el-dropdown-item divided @click.native="logout">
-            <span>退出登录</span>
+            <span>Logout</span>
           </el-dropdown-item>
         </el-dropdown-menu>
       </el-dropdown>
@@ -49,18 +43,14 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
-import Breadcrumb from '@/components/Breadcrumb'
-import TopNav from './TopNav'
-import TopBar from './TopBar'
-import Logo from './Sidebar/Logo'
-import Hamburger from '@/components/Hamburger'
-import Screenfull from '@/components/Screenfull'
-import SizeSelect from '@/components/SizeSelect'
-import Search from '@/components/HeaderSearch'
-import RuoYiGit from '@/components/RuoYi/Git'
-import RuoYiDoc from '@/components/RuoYi/Doc'
-import HeaderNotice from './HeaderNotice'
+import { mapGetters } from "vuex"
+import Breadcrumb from "@/components/Breadcrumb"
+import TopNav from "./TopNav"
+import TopBar from "./TopBar"
+import Logo from "./Sidebar/Logo"
+import Hamburger from "@/components/Hamburger"
+import Screenfull from "@/components/Screenfull"
+import HeaderNotice from "./HeaderNotice"
 
 export default {
   components: {
@@ -70,19 +60,19 @@ export default {
     TopBar,
     Hamburger,
     Screenfull,
-    SizeSelect,
-    Search,
-    RuoYiGit,
-    RuoYiDoc,
     HeaderNotice
   },
   computed: {
     ...mapGetters([
-      'sidebar',
-      'avatar',
-      'device',
-      'nickName'
+      "sidebar",
+      "device",
+      "nickName"
     ]),
+    nickNameInitial() {
+      const source = (this.nickName || "U").trim()
+      const firstChar = Array.from(source)[0] || "U"
+      return firstChar.toUpperCase()
+    },
     setting: {
       get() {
         return this.$store.state.settings.showSettings
@@ -101,25 +91,25 @@ export default {
   },
   methods: {
     toggleSideBar() {
-      this.$store.dispatch('app/toggleSideBar')
+      this.$store.dispatch("app/toggleSideBar")
     },
-    setLayout(event) {
-      this.$emit('setLayout')
+    setLayout() {
+      this.$emit("setLayout")
     },
     lockScreen() {
       const currentPath = this.$route.fullPath
-      this.$store.dispatch('lock/lockScreen', currentPath).then(() => {
-        this.$router.push('/lock')
+      this.$store.dispatch("lock/lockScreen", currentPath).then(() => {
+        this.$router.push("/lock")
       })
     },
     logout() {
-      this.$confirm('确定注销并退出系统吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
+      this.$confirm("Confirm logout?", "Notice", {
+        confirmButtonText: "OK",
+        cancelButtonText: "Cancel",
+        type: "warning"
       }).then(() => {
-        this.$store.dispatch('LogOut').then(() => {
-          location.href = '/index'
+        this.$store.dispatch("LogOut").then(() => {
+          location.href = "/index"
         })
       }).catch(() => {})
     }
@@ -235,7 +225,6 @@ export default {
       }
 
       .user-avatar {
-        cursor: pointer;
         width: 34px;
         height: 34px;
         border-radius: 50%;
@@ -243,15 +232,22 @@ export default {
         box-shadow: none;
       }
 
+      .user-avatar--initial {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1f6fd2 0%, #4b9cff 100%);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        user-select: none;
+      }
+
       .user-nickname {
         font-size: 14px;
         font-weight: 700;
         color: #122138;
-      }
-
-      .el-icon-caret-bottom {
-        cursor: pointer;
-        font-size: 12px;
       }
     }
   }

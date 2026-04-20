@@ -10,51 +10,51 @@ import jakarta.validation.constraints.Size;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
- * 应用监控对象 monitor_app
+ * App monitor entity.
  */
 public class MonitorApp extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 主键 */
     private Long id;
 
-    /** 产品名称 */
-    @Excel(name = "产品名称")
+    @Excel(name = "浜у搧鍚嶇О")
     private String productName;
 
-    /** 应用名称 */
-    @Excel(name = "应用名称")
-    private String appName;
-
-    /** 应用链接 */
-    @Excel(name = "应用链接")
+    @Excel(name = "搴旂敤閾炬帴")
     private String appLink;
 
-    /** 商店平台 */
-    // @Excel(name = "商店平台") // Import template intentionally hides this field.
+    @Excel(name = "鍟嗗簵骞冲彴")
     private String storePlatform;
 
-    /** 告警配置 */
-    // @Excel(name = "告警配置") // Import template intentionally hides this field.
+    /**
+     * Legacy single-channel field, kept only for compatibility with historical rows.
+     */
     private String ownerType;
 
-    /** 状态：1上架 0下架 */
-    // @Excel(name = "状态", readConverterExp = "1=上架,0=下架") // Import template intentionally hides this field.
     private Integer status;
 
-    /** 最近扫描时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date lastScanTime;
 
-    /** 删除标记 */
     private String delFlag;
 
-    /** 关键字 */
     private String keyword;
+
+    /**
+     * Multiple alert channel assignments for add/edit/batch assign.
+     */
+    private List<Long> alertChannelIds = new ArrayList<>();
+
+    /**
+     * Display text for assigned channel names in the list page.
+     */
+    private String alertChannelNames;
 
     public Long getId()
     {
@@ -66,8 +66,8 @@ public class MonitorApp extends BaseEntity
         this.id = id;
     }
 
-    @NotBlank(message = "产品名称不能为空")
-    @Size(min = 0, max = 100, message = "产品名称长度不能超过100个字符")
+    @NotBlank(message = "浜у搧鍚嶇О涓嶈兘涓虹┖")
+    @Size(max = 100, message = "浜у搧鍚嶇О闀垮害涓嶈兘瓒呰繃100涓瓧绗?")
     public String getProductName()
     {
         return productName;
@@ -78,20 +78,8 @@ public class MonitorApp extends BaseEntity
         this.productName = productName;
     }
 
-    @NotBlank(message = "应用名称不能为空")
-    @Size(min = 0, max = 100, message = "应用名称长度不能超过100个字符")
-    public String getAppName()
-    {
-        return appName;
-    }
-
-    public void setAppName(String appName)
-    {
-        this.appName = appName;
-    }
-
-    @NotBlank(message = "应用链接不能为空")
-    @Size(min = 0, max = 512, message = "应用链接长度不能超过512个字符")
+    @NotBlank(message = "搴旂敤閾炬帴涓嶈兘涓虹┖")
+    @Size(max = 512, message = "搴旂敤閾炬帴闀垮害涓嶈兘瓒呰繃512涓瓧绗?")
     public String getAppLink()
     {
         return appLink;
@@ -102,8 +90,8 @@ public class MonitorApp extends BaseEntity
         this.appLink = appLink;
     }
 
-    @NotBlank(message = "商店平台不能为空")
-    @Size(min = 0, max = 512, message = "商店平台长度不能超过512个字符")
+    @NotBlank(message = "鍟嗗簵骞冲彴涓嶈兘涓虹┖")
+    @Size(max = 64, message = "鍟嗗簵骞冲彴闀垮害涓嶈兘瓒呰繃64涓瓧绗?")
     public String getStorePlatform()
     {
         return storePlatform;
@@ -114,8 +102,7 @@ public class MonitorApp extends BaseEntity
         this.storePlatform = storePlatform;
     }
 
-    @NotBlank(message = "告警配置不能为空")
-    @Size(min = 0, max = 32, message = "告警配置长度不能超过32个字符")
+    @Size(max = 32, message = "鍛婅閰嶇疆闀垮害涓嶈兘瓒呰繃32涓瓧绗?")
     public String getOwnerType()
     {
         return ownerType;
@@ -126,8 +113,8 @@ public class MonitorApp extends BaseEntity
         this.ownerType = ownerType;
     }
 
-    @Min(value = 0, message = "应用状态只能为0或1")
-    @Max(value = 1, message = "应用状态只能为0或1")
+    @Min(value = 0, message = "搴旂敤鐘舵€佸彧鑳戒负0鎴?")
+    @Max(value = 1, message = "搴旂敤鐘舵€佸彧鑳戒负0鎴?")
     public Integer getStatus()
     {
         return status;
@@ -168,19 +155,40 @@ public class MonitorApp extends BaseEntity
         this.keyword = keyword;
     }
 
+    public List<Long> getAlertChannelIds()
+    {
+        return alertChannelIds;
+    }
+
+    public void setAlertChannelIds(List<Long> alertChannelIds)
+    {
+        this.alertChannelIds = alertChannelIds;
+    }
+
+    public String getAlertChannelNames()
+    {
+        return alertChannelNames;
+    }
+
+    public void setAlertChannelNames(String alertChannelNames)
+    {
+        this.alertChannelNames = alertChannelNames;
+    }
+
     @Override
     public String toString()
     {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
             .append("id", getId())
             .append("productName", getProductName())
-            .append("appName", getAppName())
             .append("appLink", getAppLink())
             .append("storePlatform", getStorePlatform())
             .append("ownerType", getOwnerType())
             .append("status", getStatus())
             .append("lastScanTime", getLastScanTime())
             .append("delFlag", getDelFlag())
+            .append("alertChannelIds", getAlertChannelIds())
+            .append("alertChannelNames", getAlertChannelNames())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

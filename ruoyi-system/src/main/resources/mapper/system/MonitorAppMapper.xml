@@ -7,7 +7,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap id="MonitorAppResult" type="com.ruoyi.system.domain.MonitorApp">
         <id property="id" column="id" />
         <result property="productName" column="product_name" />
-        <result property="appName" column="app_name" />
         <result property="appLink" column="app_link" />
         <result property="storePlatform" column="store_platform" />
         <result property="ownerType" column="owner_type" />
@@ -22,7 +21,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectMonitorAppVo">
-        select id, product_name, app_name, app_link, store_platform, owner_type, status,
+        select id, product_name, app_link, store_platform, owner_type, status,
                last_scan_time, del_flag, create_by, create_time, update_by, update_time, remark
         from monitor_app
     </sql>
@@ -50,7 +49,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             del_flag = '0'
             <if test="keyword != null and keyword != ''">
                 and (product_name like concat('%', #{keyword}, '%')
-                or app_name like concat('%', #{keyword}, '%')
                 or app_link like concat('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
@@ -80,7 +78,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertMonitorApp" parameterType="com.ruoyi.system.domain.MonitorApp" useGeneratedKeys="true" keyProperty="id">
         insert into monitor_app(
             <if test="productName != null and productName != ''">product_name,</if>
-            <if test="appName != null and appName != ''">app_name,</if>
             <if test="appLink != null and appLink != ''">app_link,</if>
             <if test="storePlatform != null and storePlatform != ''">store_platform,</if>
             <if test="ownerType != null and ownerType != ''">owner_type,</if>
@@ -91,7 +88,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             create_time
         ) values (
             <if test="productName != null and productName != ''">#{productName},</if>
-            <if test="appName != null and appName != ''">#{appName},</if>
             <if test="appLink != null and appLink != ''">#{appLink},</if>
             <if test="storePlatform != null and storePlatform != ''">#{storePlatform},</if>
             <if test="ownerType != null and ownerType != ''">#{ownerType},</if>
@@ -107,10 +103,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update monitor_app
         <set>
             <if test="productName != null and productName != ''">product_name = #{productName},</if>
-            <if test="appName != null and appName != ''">app_name = #{appName},</if>
             <if test="appLink != null and appLink != ''">app_link = #{appLink},</if>
             <if test="storePlatform != null and storePlatform != ''">store_platform = #{storePlatform},</if>
-            <if test="ownerType != null and ownerType != ''">owner_type = #{ownerType},</if>
+            <if test="ownerType != null">owner_type = #{ownerType},</if>
             <if test="status != null">status = #{status},</if>
             <if test="lastScanTime != null">last_scan_time = #{lastScanTime},</if>
             <if test="remark != null">remark = #{remark},</if>

@@ -26,7 +26,7 @@ export function addApp(data) {
   return request({
     url: "/monitor/app",
     method: "post",
-    data: data
+    data
   })
 }
 
@@ -34,7 +34,15 @@ export function updateApp(data) {
   return request({
     url: "/monitor/app",
     method: "put",
-    data: data
+    data
+  })
+}
+
+export function assignAppAlertChannels(data) {
+  return request({
+    url: "/monitor/app/assignChannels",
+    method: "put",
+    data
   })
 }
 
@@ -42,7 +50,7 @@ export function changeAppStatus(data) {
   return request({
     url: "/monitor/app/status",
     method: "put",
-    data: data
+    data
   })
 }
 

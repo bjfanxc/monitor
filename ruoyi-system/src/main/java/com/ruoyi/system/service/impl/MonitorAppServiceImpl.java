@@ -1,6 +1,5 @@
 package com.ruoyi.system.service.impl;
 
-import com.alibaba.fastjson2.JSON;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
@@ -13,15 +12,20 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
 import com.ruoyi.system.domain.MonitorAlertRecord;
 import com.ruoyi.system.domain.MonitorApp;
+import com.ruoyi.system.domain.MonitorAppAlertChannel;
 import com.ruoyi.system.domain.dto.MonitorAppStatusDto;
+import com.ruoyi.system.domain.vo.MonitorAppImportResultVo;
 import com.ruoyi.system.domain.vo.MonitorAppOverviewVo;
 import com.ruoyi.system.domain.vo.MonitorAppScanResultVo;
 import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.mapper.MonitorAlertRecordMapper;
+import com.ruoyi.system.mapper.MonitorAppAlertChannelMapper;
 import com.ruoyi.system.mapper.MonitorAppMapper;
 import com.ruoyi.system.service.IMonitorAppService;
 import com.ruoyi.system.service.ISysConfigService;
 import com.ruoyi.system.service.ISysDictDataService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * App monitor service implementation.
@@ -53,11 +58,11 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     private static final String ALERT_CHANNEL_TELEGRAM = "telegram";
     private static final String SCAN_MODE_HTTP = "http";
     private static final String SCAN_MODE_PLAYWRIGHT = "playwright";
-    private static final String DEFAULT_OWNER_TYPE = "system";
     private static final String TELEGRAM_BOT_TOKEN_CONFIG_KEY = "monitor.telegram.botToken";
     private static final String TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY = "monitor.telegram.alertTemplate";
     private static final String DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         + "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+    private static final Logger log = LoggerFactory.getLogger(MonitorAppServiceImpl.class);
 
     private final HttpClient httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
@@ -72,6 +77,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     @Autowired
     private MonitorAlertChannelMapper monitorAlertChannelMapper;
+
+    @Autowired
+    private MonitorAppAlertChannelMapper monitorAppAlertChannelMapper;
 
     @Autowired
     private ISysDictDataService sysDictDataService;
@@ -98,7 +106,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("storePlatforms", buildStorePlatformOptions());
-        result.put("ownerTypes", buildOwnerTypeOptions());
+        result.put("alertChannels", buildAlertChannelOptions());
         return result;
     }
 
@@ -106,16 +114,19 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     public List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp)
     {
         applyDataPermission(monitorApp);
-        return monitorAppMapper.selectMonitorAppList(monitorApp);
+        List<MonitorApp> list = monitorAppMapper.selectMonitorAppList(monitorApp);
+        fillAlertChannelData(list);
+        return list;
     }
 
     @Override
     public int insertMonitorApp(MonitorApp monitorApp)
     {
         normalizeMonitorApp(monitorApp);
-        validateOwnerType(monitorApp, monitorApp.getCreateBy());
         checkMonitorAppUnique(monitorApp);
-        return monitorAppMapper.insertMonitorApp(monitorApp);
+        int rows = monitorAppMapper.insertMonitorApp(monitorApp);
+        saveAlertChannels(monitorApp.getId(), monitorApp.getAlertChannelIds(), monitorApp.getCreateBy());
+        return rows;
     }
 
     @Override
@@ -127,15 +138,17 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
         MonitorApp exists = ensureMonitorAppExists(monitorApp.getId());
         normalizeMonitorApp(monitorApp);
-        validateOwnerType(monitorApp, exists.getCreateBy());
         checkMonitorAppUnique(monitorApp);
-        return monitorAppMapper.updateMonitorApp(monitorApp);
+        int rows = monitorAppMapper.updateMonitorApp(monitorApp);
+        saveAlertChannels(monitorApp.getId(), monitorApp.getAlertChannelIds(), exists.getCreateBy());
+        return rows;
     }
 
     @Override
     public int deleteMonitorAppById(Long id)
     {
         ensureMonitorAppExists(id);
+        monitorAppAlertChannelMapper.deleteByAppId(id);
         return monitorAppMapper.deleteMonitorAppById(id);
     }
 
@@ -149,7 +162,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     }
 
     @Override
-    public String importMonitorApp(List<MonitorApp> appList, boolean updateSupport, String operName)
+    public MonitorAppImportResultVo importMonitorApp(List<MonitorApp> appList, boolean updateSupport, String operName)
     {
         if (StringUtils.isNull(appList) || appList.isEmpty())
         {
@@ -159,6 +172,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         int failureNum = 0;
         StringBuilder successMsg = new StringBuilder();
         StringBuilder failureMsg = new StringBuilder();
+        MonitorAppImportResultVo result = new MonitorAppImportResultVo();
         for (MonitorApp monitorApp : appList)
         {
             try
@@ -172,35 +186,38 @@ public class MonitorAppServiceImpl implements IMonitorAppService
                 if (StringUtils.isNull(exists))
                 {
                     monitorAppMapper.insertMonitorApp(monitorApp);
+                    result.getImportedIds().add(monitorApp.getId());
+                    result.getHandledIds().add(monitorApp.getId());
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append(". App ")
-                        .append(monitorApp.getAppName()).append(" imported successfully");
+                        .append(monitorApp.getProductName()).append(" imported successfully");
                 }
                 else if (updateSupport)
                 {
                     checkDataPermission(exists.getCreateBy());
                     monitorApp.setId(exists.getId());
                     monitorApp.setStatus(exists.getStatus());
-                    monitorApp.setOwnerType(exists.getOwnerType());
                     monitorAppMapper.updateMonitorApp(monitorApp);
+                    result.getUpdatedIds().add(exists.getId());
+                    result.getHandledIds().add(exists.getId());
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append(". App ")
-                        .append(monitorApp.getAppName()).append(" updated successfully");
+                        .append(monitorApp.getProductName()).append(" updated successfully");
                 }
                 else
                 {
                     failureNum++;
                     failureMsg.append("<br/>").append(failureNum).append(". App ")
-                        .append(monitorApp.getAppName())
+                        .append(monitorApp.getProductName())
                         .append(" already exists, unique key appLink + storePlatform conflicts");
                 }
             }
             catch (Exception e)
             {
                 failureNum++;
-                String appName = StringUtils.isNotBlank(monitorApp.getAppName()) ? monitorApp.getAppName() : "Unnamed app";
+                String productName = StringUtils.isNotBlank(monitorApp.getProductName()) ? monitorApp.getProductName() : "Unnamed product";
                 failureMsg.append("<br/>").append(failureNum).append(". App ")
-                    .append(appName).append(" import failed: ").append(e.getMessage());
+                    .append(productName).append(" import failed: ").append(e.getMessage());
             }
         }
         if (failureNum > 0)
@@ -208,7 +225,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             failureMsg.insert(0, "Import failed, " + failureNum + " rows contain errors:");
             throw new ServiceException(failureMsg.toString());
         }
-        return "Import succeeded, total " + successNum + " rows:" + successMsg;
+        result.setMessage("Import succeeded, total " + successNum + " rows:" + successMsg);
+        return result;
     }
 
     @Override
@@ -222,6 +240,42 @@ public class MonitorAppServiceImpl implements IMonitorAppService
     {
         MonitorApp monitorApp = ensureMonitorAppExists(id);
         return scanGooglePlayAppInternal(monitorApp, resolveOperator(operator), resolveScanMode(scanMode));
+    }
+
+    @Override
+    public int assignAlertChannels(List<Long> appIds, List<Long> channelIds, String operator)
+    {
+        if (appIds == null || appIds.isEmpty())
+        {
+            throw new ServiceException("Please select at least one product");
+        }
+        List<Long> distinctAppIds = appIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        List<Long> distinctChannelIds = channelIds == null
+            ? new ArrayList<>()
+            : channelIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        validateAssignableChannels(distinctChannelIds);
+        for (Long appId : distinctAppIds)
+        {
+            ensureMonitorAppExists(appId);
+        }
+        monitorAppAlertChannelMapper.deleteByAppIds(distinctAppIds);
+        if (!distinctChannelIds.isEmpty())
+        {
+            List<MonitorAppAlertChannel> relations = new ArrayList<>();
+            for (Long appId : distinctAppIds)
+            {
+                for (Long channelId : distinctChannelIds)
+                {
+                    MonitorAppAlertChannel relation = new MonitorAppAlertChannel();
+                    relation.setAppId(appId);
+                    relation.setChannelId(channelId);
+                    relation.setCreateBy(operator);
+                    relations.add(relation);
+                }
+            }
+            monitorAppAlertChannelMapper.batchInsert(relations);
+        }
+        return distinctAppIds.size();
     }
 
     @Override
@@ -286,7 +340,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
         MonitorAppScanResultVo result = new MonitorAppScanResultVo();
         result.setId(monitorApp.getId());
-        result.setAppName(monitorApp.getAppName());
+        result.setProductName(monitorApp.getProductName());
         result.setBundleId(extractBundleId(monitorApp));
         result.setScanMode(scanMode);
         result.setPreviousStatus(previousStatus);
@@ -323,13 +377,13 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() >= 400)
             {
-                return ScanOutcome.offline("HTTP mode: Google Play returned status code " + response.statusCode());
+                return ScanOutcome.offline("HTTP模式：Google Play返回" + response.statusCode());
             }
             return evaluateGooglePlayDocument(response.body(), extractBundleId(monitorApp), SCAN_MODE_HTTP);
         }
         catch (Exception e)
         {
-            return ScanOutcome.unknown("HTTP mode request failed: " + e.getMessage());
+            return ScanOutcome.unknown("HTTP模式：请求失败 - " + e.getMessage());
         }
     }
 
@@ -352,23 +406,23 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
         catch (Exception e)
         {
-            return ScanOutcome.unknown("Playwright mode request failed: " + e.getMessage());
+            return ScanOutcome.unknown("Playwright模式：请求失败 - " + e.getMessage());
         }
     }
 
     private ScanOutcome evaluateGooglePlayDocument(String body, String bundleId, String scanMode)
     {
         String content = StringUtils.defaultString(body);
-        String modePrefix = SCAN_MODE_PLAYWRIGHT.equals(scanMode) ? "Playwright mode" : "HTTP mode";
+        String modePrefix = SCAN_MODE_PLAYWRIGHT.equals(scanMode) ? "Playwright模式" : "HTTP模式";
         if (containsOfflineMarker(content))
         {
-            return ScanOutcome.offline(modePrefix + ": app not found or not visible in this region");
+            return ScanOutcome.offline(modePrefix + "：Google Play页面不存在或当前区域不可见");
         }
         if (containsOnlineMarker(content, bundleId))
         {
-            return ScanOutcome.online(modePrefix + ": app detail page is reachable");
+            return ScanOutcome.online(modePrefix + "：Google Play页面可访问");
         }
-        return ScanOutcome.unknown(modePrefix + ": page loaded but status could not be determined");
+        return ScanOutcome.unknown(modePrefix + "：页面已加载但无法确定状态");
     }
 
     private boolean notifyStatusChanged(MonitorApp monitorApp, Integer currentStatus, String detailMessage, Date alertTime)
@@ -376,10 +430,11 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         String alertType = currentStatus != null && currentStatus == 1 ? ALERT_TYPE_ONLINE : ALERT_TYPE_OFFLINE;
         String statusText = currentStatus != null && currentStatus == 1 ? "ONLINE" : "OFFLINE";
         String detailUrl = resolveGooglePlayUrl(monitorApp);
-        String content = String.format("[Google Play App Status Changed]%nProduct: %s%nApp: %s%nApp Link: %s%nStatus: %s%nURL: %s%nDetail: %s",
-            monitorApp.getProductName() + " / " + monitorApp.getAppName(),
-            monitorApp.getAppName(),
-            detailUrl,
+        String alertMessage = detailMessage;
+        String logMessage = String.format("[MonitorAlert] product=%s, appId=%s, alertType=%s, status=%s, url=%s, detail=%s",
+            monitorApp.getProductName(),
+            monitorApp.getId(),
+            alertType,
             statusText,
             detailUrl,
             detailMessage);
@@ -388,8 +443,8 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         List<MonitorAlertChannel> channels = resolveAlertChannels(monitorApp);
         if (channels == null || channels.isEmpty())
         {
-            insertAlertRecord(monitorApp, ALERT_CHANNEL_SYSTEM, alertType, content,
-                buildExtJson(detailUrl, true, "No matched enabled Telegram channel configured"), alertTime);
+            log.info("{}, telegram=no matched enabled channel", logMessage);
+            insertAlertRecord(monitorApp, ALERT_CHANNEL_SYSTEM, alertType, alertMessage, alertTime);
             return false;
         }
 
@@ -397,8 +452,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         for (MonitorAlertChannel channel : channels)
         {
             TelegramSendResult sendResult = sendTelegramMessage(channel, telegramContent);
-            insertAlertRecord(monitorApp, ALERT_CHANNEL_TELEGRAM, alertType, content,
-                buildExtJson(detailUrl, sendResult.isSuccess(), sendResult.getMessage() + ", channel: " + channel.getName()), alertTime);
+            log.info("{}, telegramChannel={}, telegramResult={}, telegramSuccess={}",
+                logMessage, channel.getName(), sendResult.getMessage(), sendResult.isSuccess());
+            insertAlertRecord(monitorApp, ALERT_CHANNEL_TELEGRAM, alertType, alertMessage, alertTime);
             anyNotified = anyNotified || sendResult.isSuccess();
         }
         return anyNotified;
@@ -406,29 +462,10 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private List<MonitorAlertChannel> resolveAlertChannels(MonitorApp monitorApp)
     {
-        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(monitorApp.getCreateBy());
-        if (channels == null || channels.isEmpty())
-        {
-            return channels;
-        }
-        String ownerType = StringUtils.trim(monitorApp.getOwnerType());
-        if (StringUtils.isBlank(ownerType) || StringUtils.equalsIgnoreCase(ownerType, SYSTEM_OPERATOR))
-        {
-            return channels;
-        }
-        List<MonitorAlertChannel> matched = new ArrayList<>();
-        for (MonitorAlertChannel channel : channels)
-        {
-            if (StringUtils.equals(ownerType, String.valueOf(channel.getId()))
-                || StringUtils.equals(ownerType, channel.getName()))
-            {
-                matched.add(channel);
-            }
-        }
-        return matched;
+        return monitorAlertChannelMapper.selectEnabledChannelsByAppId(monitorApp.getId());
     }
 
-    private void insertAlertRecord(MonitorApp monitorApp, String channelType, String alertType, String message, String extJson, Date alertTime)
+    private void insertAlertRecord(MonitorApp monitorApp, String channelType, String alertType, String message, Date alertTime)
     {
         MonitorAlertRecord alertRecord = new MonitorAlertRecord();
         alertRecord.setAppId(monitorApp.getId());
@@ -436,7 +473,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         alertRecord.setAlertType(alertType);
         alertRecord.setAlertMessage(message);
         alertRecord.setAlertTime(alertTime);
-        alertRecord.setExtJson(extJson);
         alertRecord.setCreateBy(monitorApp.getCreateBy());
         monitorAlertRecordMapper.insertMonitorAlertRecord(alertRecord);
     }
@@ -484,37 +520,25 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         return channel == null ? StringUtils.EMPTY : StringUtils.trim(channel.getBotToken());
     }
 
-    private String buildExtJson(String detailUrl, boolean success, String message)
-    {
-        Map<String, Object> ext = new LinkedHashMap<>();
-        ext.put("detailUrl", detailUrl);
-        ext.put("success", success);
-        ext.put("message", message);
-        return JSON.toJSONString(ext);
-    }
-
     private String buildTelegramAlertMessage(MonitorApp monitorApp, String statusText, String detailUrl, String detailMessage)
     {
-        String alertTitle = "OFFLINE".equals(statusText) ? "应用下架告警" : "应用恢复通知";
-        String statusLabel = "OFFLINE".equals(statusText) ? "下架/不可用" : "已恢复/可访问";
-        String productName = monitorApp == null || monitorApp.getProductName() == null ? StringUtils.EMPTY : monitorApp.getProductName();
-        String appName = monitorApp == null || monitorApp.getAppName() == null ? StringUtils.EMPTY : monitorApp.getAppName();
+        String alertTitle = "OFFLINE".equals(statusText) ? "搴旂敤涓嬫灦鍛婅" : "搴旂敤鎭㈠閫氱煡";
+        String statusLabel = "OFFLINE".equals(statusText) ? "涓嬫灦/涓嶅彲璁块棶" : "宸叉仮澶?鍙闂?";
+        String productName = monitorApp == null ? StringUtils.EMPTY : StringUtils.defaultString(monitorApp.getProductName());
         String template = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY));
         if (StringUtils.isBlank(template))
         {
-            template = "<b>【${alertTitle}】</b>\n"
-                + "<b>当前状态：</b><code>${statusLabel}</code>\n"
-                + "<b>产品：</b>${productName}\n"
-                + "<b>应用：</b>${appName}\n"
-                + "<b>商店链接：</b><a href=\"${detailUrl}\">立即查看</a>\n"
-                + "<b>异常说明：</b>${detailMessage}";
+            template = "<b>[${alertTitle}]</b>\n"
+                + "<b>褰撳墠鐘舵€侊細</b><code>${statusLabel}</code>\n"
+                + "<b>浜у搧锛?/b>${productName}\n"
+                + "<b>鍟嗗簵閾炬帴锛?/b><a href=\"${detailUrl}\">绔嬪嵆鏌ョ湅</a>\n"
+                + "<b>寮傚父璇存槑锛?/b>${detailMessage}";
         }
         return template
             .replace("${alertTitle}", escapeHtml(alertTitle))
             .replace("${status}", escapeHtml(statusText))
             .replace("${statusLabel}", escapeHtml(statusLabel))
             .replace("${productName}", escapeHtml(productName))
-            .replace("${appName}", escapeHtml(appName))
             .replace("${detailUrl}", escapeHtmlAttribute(detailUrl))
             .replace("${detailMessage}", escapeHtml(detailMessage));
     }
@@ -604,15 +628,10 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             throw new ServiceException("Product name cannot be empty");
         }
-        if (StringUtils.isBlank(monitorApp.getAppName()))
-        {
-            throw new ServiceException("App name cannot be empty");
-        }
         if (StringUtils.isBlank(monitorApp.getAppLink()))
         {
             throw new ServiceException("App link cannot be empty");
         }
-        // Store platform / region / alert config / status are intentionally hidden from import template.
     }
 
     private void normalizeMonitorApp(MonitorApp monitorApp)
@@ -622,10 +641,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
             return;
         }
         monitorApp.setProductName(StringUtils.trim(monitorApp.getProductName()));
-        monitorApp.setAppName(StringUtils.trim(monitorApp.getAppName()));
         monitorApp.setAppLink(StringUtils.trim(monitorApp.getAppLink()));
         monitorApp.setStorePlatform(StringUtils.trim(monitorApp.getStorePlatform()));
-        if (StringUtils.isNotBlank(monitorApp.getAppLink()))
+        if (StringUtils.isNotBlank(monitorApp.getAppLink()) && isGooglePlayApp(monitorApp))
         {
             monitorApp.setAppLink(normalizeGooglePlayLink(monitorApp.getAppLink()));
         }
@@ -643,42 +661,10 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             monitorApp.setStorePlatform(GOOGLE_PLAY_STORE);
         }
-        if (StringUtils.isBlank(monitorApp.getOwnerType()))
-        {
-            monitorApp.setOwnerType(DEFAULT_OWNER_TYPE);
-        }
         if (monitorApp.getStatus() == null)
         {
             monitorApp.setStatus(1);
         }
-    }
-
-    private void validateOwnerType(MonitorApp monitorApp, String createBy)
-    {
-        if (monitorApp == null || StringUtils.isBlank(monitorApp.getOwnerType()))
-        {
-            throw new ServiceException("Owner type cannot be empty");
-        }
-        String ownerType = StringUtils.trim(monitorApp.getOwnerType());
-        if (StringUtils.equalsIgnoreCase(ownerType, SYSTEM_OPERATOR))
-        {
-            return;
-        }
-        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(createBy);
-        if (channels == null || channels.isEmpty())
-        {
-            throw new ServiceException("No enabled Telegram channel available for the current user");
-        }
-        for (MonitorAlertChannel channel : channels)
-        {
-            if (StringUtils.equals(ownerType, String.valueOf(channel.getId()))
-                || StringUtils.equals(ownerType, channel.getName()))
-            {
-                monitorApp.setOwnerType(String.valueOf(channel.getId()));
-                return;
-            }
-        }
-        throw new ServiceException("Selected owner type is invalid or unavailable");
     }
 
     private List<Map<String, String>> buildStorePlatformOptions()
@@ -699,7 +685,7 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         return options;
     }
 
-    private List<Map<String, String>> buildOwnerTypeOptions()
+/*    private List<Map<String, String>> buildAlertChannelOptions()
     {
         List<Map<String, String>> options = new ArrayList<>();
         String username = SecurityUtils.getUsername();
@@ -707,14 +693,45 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         {
             return options;
         }
-        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectEnabledTelegramChannelsByCreateBy(username);
+        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAlertChannelsByCreateBy(username);
         if (channels == null)
         {
             return options;
         }
         for (MonitorAlertChannel channel : channels)
         {
-            options.add(buildOption(channel.getName(), String.valueOf(channel.getId())));
+            String label = channel.getName();
+            if (channel.getEnabled() != null && channel.getEnabled() == 0)
+            {
+                label = label + "锛堝凡鍋滅敤锛?;
+            }
+            options.add(buildOption(label, String.valueOf(channel.getId())));
+        }
+        return options;
+    }
+
+*/
+    private List<Map<String, String>> buildAlertChannelOptions()
+    {
+        List<Map<String, String>> options = new ArrayList<>();
+        String username = SecurityUtils.getUsername();
+        if (StringUtils.isBlank(username))
+        {
+            return options;
+        }
+        List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAlertChannelsByCreateBy(username);
+        if (channels == null)
+        {
+            return options;
+        }
+        for (MonitorAlertChannel channel : channels)
+        {
+            String label = channel.getName();
+            if (channel.getEnabled() != null && channel.getEnabled() == 0)
+            {
+                label = label + " (disabled)";
+            }
+            options.add(buildOption(label, String.valueOf(channel.getId())));
         }
         return options;
     }
@@ -725,6 +742,104 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         option.put("label", label);
         option.put("value", value);
         return option;
+    }
+
+/*    private void fillAlertChannelData(List<MonitorApp> list)
+    {
+        if (list == null || list.isEmpty())
+        {
+            return;
+        }
+        for (MonitorApp app : list)
+        {
+            List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAssignedChannelsByAppId(app.getId());
+            if (channels == null || channels.isEmpty())
+            {
+                app.setAlertChannelIds(new ArrayList<>());
+                app.setAlertChannelNames(StringUtils.EMPTY);
+                continue;
+            }
+            app.setAlertChannelIds(channels.stream().map(MonitorAlertChannel::getId).collect(Collectors.toList()));
+            app.setAlertChannelNames(channels.stream().map(MonitorAlertChannel::getName).collect(Collectors.joining("銆?)));
+        }
+    }
+
+*/
+    private void fillAlertChannelData(List<MonitorApp> list)
+    {
+        if (list == null || list.isEmpty())
+        {
+            return;
+        }
+        for (MonitorApp app : list)
+        {
+            List<MonitorAlertChannel> channels = monitorAlertChannelMapper.selectAssignedChannelsByAppId(app.getId());
+            if (channels == null || channels.isEmpty())
+            {
+                app.setAlertChannelIds(new ArrayList<>());
+                app.setAlertChannelNames(StringUtils.EMPTY);
+                continue;
+            }
+            app.setAlertChannelIds(channels.stream().map(MonitorAlertChannel::getId).collect(Collectors.toList()));
+            app.setAlertChannelNames(channels.stream().map(MonitorAlertChannel::getName).collect(Collectors.joining(", ")));
+        }
+    }
+
+    private void saveAlertChannels(Long appId, List<Long> channelIds, String createBy)
+    {
+        if (appId == null)
+        {
+            return;
+        }
+        monitorAppAlertChannelMapper.deleteByAppId(appId);
+        List<Long> distinctChannelIds = channelIds == null
+            ? new ArrayList<>()
+            : channelIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        validateAssignableChannels(distinctChannelIds);
+        if (distinctChannelIds.isEmpty())
+        {
+            return;
+        }
+        List<MonitorAppAlertChannel> relations = new ArrayList<>();
+        for (Long channelId : distinctChannelIds)
+        {
+            MonitorAppAlertChannel relation = new MonitorAppAlertChannel();
+            relation.setAppId(appId);
+            relation.setChannelId(channelId);
+            relation.setCreateBy(createBy);
+            relations.add(relation);
+        }
+        monitorAppAlertChannelMapper.batchInsert(relations);
+    }
+
+    private void validateAssignableChannels(List<Long> channelIds)
+    {
+        if (channelIds == null || channelIds.isEmpty())
+        {
+            return;
+        }
+        List<Long> availableIds;
+        if (SecurityUtils.isAdmin())
+        {
+            availableIds = channelIds.stream()
+                .map(monitorAlertChannelMapper::selectMonitorAlertChannelById)
+                .filter(Objects::nonNull)
+                .map(MonitorAlertChannel::getId)
+                .collect(Collectors.toList());
+        }
+        else
+        {
+            availableIds = monitorAlertChannelMapper.selectAlertChannelsByCreateBy(SecurityUtils.getUsername()).stream()
+                .map(MonitorAlertChannel::getId)
+                .collect(Collectors.toList());
+        }
+        for (Long channelId : channelIds)
+        {
+            if (!availableIds.contains(channelId))
+            {
+                throw new ServiceException("Selected alert group is invalid or unavailable");
+            }
+        }
     }
 
     private void checkMonitorAppUnique(MonitorApp monitorApp)
@@ -765,9 +880,9 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         }
         catch (Exception e)
         {
-            throw new ServiceException("Invalid app link format");
+            throw new ServiceException("Google Play应用链接格式不正确，请使用应用详情页链接");
         }
-        throw new ServiceException("Unable to extract bundleId from app link");
+        throw new ServiceException("Google Play应用链接缺少应用ID，请使用完整的详情页链接");
     }
 
     private String normalizeGooglePlayLink(String appLink)

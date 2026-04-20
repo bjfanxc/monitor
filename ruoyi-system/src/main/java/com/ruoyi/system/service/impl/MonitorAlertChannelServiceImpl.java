@@ -14,15 +14,15 @@ import com.ruoyi.system.service.ISysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 告警渠道服务实现
- */
 @Service
 public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelService
 {
     private static final String TELEGRAM = "telegram";
+    private static final String ACCESS_MODE_WEBHOOK = "webhook";
+    private static final String ACCESS_MODE_CUSTOM = "custom";
     private static final String TELEGRAM_BOT_TOKEN_CONFIG_KEY = "monitor.telegram.botToken";
     private static final String TELEGRAM_BIND_KEYWORD_CONFIG_KEY = "monitor.telegram.bindKeyword";
     private static final String WEBHOOK_OPERATOR = "telegram-webhook";
@@ -45,11 +45,27 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     }
 
     @Override
+    public List<MonitorAlertChannel> selectAlertChannelsByCurrentUser()
+    {
+        String username = SecurityUtils.getUsername();
+        if (StringUtils.isBlank(username))
+        {
+            return new ArrayList<>();
+        }
+        if (SecurityUtils.isAdmin())
+        {
+            MonitorAlertChannel query = new MonitorAlertChannel();
+            query.setChannelType(TELEGRAM);
+            return monitorAlertChannelMapper.selectTelegramChannelList(query);
+        }
+        return monitorAlertChannelMapper.selectAlertChannelsByCreateBy(username);
+    }
+
+    @Override
     public int insertMonitorAlertChannel(MonitorAlertChannel channel)
     {
         channel.setChannelType(TELEGRAM);
-        // Customer bindings only maintain chatId. Bot token comes from platform-level system config.
-        channel.setBotToken(StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY)));
+        normalizeChannel(channel, true);
         return monitorAlertChannelMapper.insertMonitorAlertChannel(channel);
     }
 
@@ -58,12 +74,15 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         if (channel.getId() == null)
         {
-            throw new ServiceException("渠道ID不能为空");
+            throw new ServiceException("Channel ID cannot be empty");
         }
-        ensureMonitorAlertChannelExists(channel.getId());
+        MonitorAlertChannel existing = ensureMonitorAlertChannelExists(channel.getId());
         channel.setChannelType(TELEGRAM);
-        // Customer bindings only maintain chatId. Bot token comes from platform-level system config.
-        channel.setBotToken(StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY)));
+        if (StringUtils.isBlank(channel.getCreateBy()))
+        {
+            channel.setCreateBy(existing.getCreateBy());
+        }
+        normalizeChannel(channel, false);
         return monitorAlertChannelMapper.updateMonitorAlertChannel(channel);
     }
 
@@ -108,11 +127,11 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         SysUser bindUser = resolveBindUser(bindTarget);
         if (bindUser == null)
         {
-            throw new ServiceException("未找到可绑定的用户：" + bindTarget);
+            throw new ServiceException("No matching user found: " + bindTarget);
         }
         if (!"0".equals(bindUser.getStatus()))
         {
-            throw new ServiceException("目标用户已停用，无法绑定：" + bindTarget);
+            throw new ServiceException("The target user is disabled and cannot be bound: " + bindTarget);
         }
 
         bindTelegramChat(bindUser, chatId, chatName);
@@ -124,6 +143,57 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         ensureMonitorAlertChannelExists(id);
         return monitorAlertChannelMapper.deleteMonitorAlertChannelById(id);
+    }
+
+    private void normalizeChannel(MonitorAlertChannel channel, boolean isCreate)
+    {
+        if (channel == null)
+        {
+            return;
+        }
+        channel.setName(StringUtils.trim(channel.getName()));
+        channel.setChatId(StringUtils.trim(channel.getChatId()));
+        channel.setBotToken(StringUtils.trim(channel.getBotToken()));
+        channel.setAccessMode(StringUtils.defaultIfBlank(StringUtils.trim(channel.getAccessMode()), ACCESS_MODE_CUSTOM));
+        if (channel.getEnabled() == null)
+        {
+            channel.setEnabled(1);
+        }
+        if (!ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode()) && !ACCESS_MODE_CUSTOM.equals(channel.getAccessMode()))
+        {
+            throw new ServiceException("Unsupported channel access mode");
+        }
+        if (ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode()))
+        {
+            channel.setBotToken(StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY)));
+            if (StringUtils.isBlank(channel.getRemark()))
+            {
+                channel.setRemark("Platform bot webhook binding");
+            }
+        }
+        else
+        {
+            if (StringUtils.isBlank(channel.getBotToken()))
+            {
+                throw new ServiceException("Custom bot token cannot be empty");
+            }
+            if (StringUtils.isBlank(channel.getRemark()))
+            {
+                channel.setRemark("Custom manual channel");
+            }
+        }
+        if (StringUtils.isBlank(channel.getName()))
+        {
+            throw new ServiceException("Channel name cannot be empty");
+        }
+        if (StringUtils.isBlank(channel.getChatId()))
+        {
+            throw new ServiceException("Group Chat ID cannot be empty");
+        }
+        if (isCreate && StringUtils.isBlank(channel.getCreateBy()))
+        {
+            channel.setCreateBy(SecurityUtils.getUsername());
+        }
     }
 
     private JSONObject firstMessageNode(JSONObject root)
@@ -146,6 +216,29 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         return root.getJSONObject("edited_channel_post");
     }
 
+/*    private String extractBindTarget(String text)
+    {
+        String content = StringUtils.trim(text);
+        if (StringUtils.startsWithIgnoreCase(content, "/start"))
+        {
+            content = StringUtils.trim(content.substring(6));
+        }
+        String bindKeyword = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BIND_KEYWORD_CONFIG_KEY));
+        if (StringUtils.isBlank(bindKeyword))
+        {
+            bindKeyword = "绑定机器人";
+        }
+        if (!StringUtils.startsWith(content, bindKeyword))
+        {
+            return null;
+        }
+        String target = StringUtils.substringAfter(content, bindKeyword);
+        target = StringUtils.removeStart(target, ":");
+        target = StringUtils.removeStart(target, "：");
+        return StringUtils.trim(target);
+    }
+
+*/
     private String extractBindTarget(String text)
     {
         String content = StringUtils.trim(text);
@@ -202,11 +295,12 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         MonitorAlertChannel channel = new MonitorAlertChannel();
         channel.setChannelType(TELEGRAM);
+        channel.setAccessMode(ACCESS_MODE_WEBHOOK);
         channel.setName(StringUtils.isNotBlank(chatName) ? chatName : bindUser.getNickName());
         channel.setChatId(chatId);
         channel.setEnabled(1);
         channel.setBotToken(StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY)));
-        channel.setRemark("Webhook自动绑定，绑定账号：" + bindUser.getUserName());
+        channel.setRemark("Webhook auto binding, user: " + bindUser.getUserName());
         channel.setCreateBy(bindUser.getUserName());
         channel.setUpdateBy(WEBHOOK_OPERATOR);
 
@@ -224,18 +318,19 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         monitorAlertChannelMapper.updateMonitorAlertChannel(channel);
     }
 
-    private void ensureMonitorAlertChannelExists(Long id)
+    private MonitorAlertChannel ensureMonitorAlertChannelExists(Long id)
     {
         if (id == null)
         {
-            throw new ServiceException("渠道ID不能为空");
+            throw new ServiceException("Channel ID cannot be empty");
         }
         MonitorAlertChannel channel = monitorAlertChannelMapper.selectMonitorAlertChannelById(id);
         if (channel == null)
         {
-            throw new ServiceException("Telegram 渠道不存在或已被删除");
+            throw new ServiceException("Alert channel does not exist or has been deleted");
         }
         checkDataPermission(channel.getCreateBy());
+        return channel;
     }
 
     private void applyDataPermission(MonitorAlertChannel channel)
@@ -251,7 +346,7 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     {
         if (!SecurityUtils.isAdmin() && !StringUtils.equals(SecurityUtils.getUsername(), createBy))
         {
-            throw new ServiceException("无权操作其他用户的数据");
+            throw new ServiceException("No permission to operate other users' data");
         }
     }
 }

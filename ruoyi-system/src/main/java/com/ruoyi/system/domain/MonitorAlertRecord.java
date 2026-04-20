@@ -8,50 +8,33 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import java.util.Date;
 
 /**
- * 告警记录对象 monitor_alert_record
+ * monitor_alert_record
  */
 public class MonitorAlertRecord extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 主键 */
     private Long id;
 
-    /** 应用ID */
     private Long appId;
 
-    /** 产品名称 */
     private String productName;
 
-    /** 应用名称 */
-    private String appName;
-
-    /** 应用链接 */
     private String appLink;
 
-    /** 商店平台 */
     private String storePlatform;
 
-    /** 告警渠道 */
     private String channelType;
 
-    /** 告警类型 */
     private String alertType;
 
-    /** 告警内容 */
     private String alertMessage;
 
-    /** 告警时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date alertTime;
 
-    /** 扩展信息 */
-    private String extJson;
-
-    /** 删除标记 */
     private String delFlag;
 
-    /** 关键字 */
     private String keyword;
 
     public Long getId()
@@ -82,16 +65,6 @@ public class MonitorAlertRecord extends BaseEntity
     public void setProductName(String productName)
     {
         this.productName = productName;
-    }
-
-    public String getAppName()
-    {
-        return appName;
-    }
-
-    public void setAppName(String appName)
-    {
-        this.appName = appName;
     }
 
     public String getAppLink()
@@ -154,16 +127,6 @@ public class MonitorAlertRecord extends BaseEntity
         this.alertTime = alertTime;
     }
 
-    public String getExtJson()
-    {
-        return extJson;
-    }
-
-    public void setExtJson(String extJson)
-    {
-        this.extJson = extJson;
-    }
-
     public String getDelFlag()
     {
         return delFlag;
@@ -191,14 +154,12 @@ public class MonitorAlertRecord extends BaseEntity
             .append("id", getId())
             .append("appId", getAppId())
             .append("productName", getProductName())
-            .append("appName", getAppName())
             .append("appLink", getAppLink())
             .append("storePlatform", getStorePlatform())
             .append("channelType", getChannelType())
             .append("alertType", getAlertType())
             .append("alertMessage", getAlertMessage())
             .append("alertTime", getAlertTime())
-            .append("extJson", getExtJson())
             .append("delFlag", getDelFlag())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())

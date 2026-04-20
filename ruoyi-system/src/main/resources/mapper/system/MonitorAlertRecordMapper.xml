@@ -8,14 +8,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <id property="id" column="id" />
         <result property="appId" column="app_id" />
         <result property="productName" column="product_name" />
-        <result property="appName" column="app_name" />
         <result property="appLink" column="app_link" />
         <result property="storePlatform" column="store_platform" />
         <result property="channelType" column="channel_type" />
         <result property="alertType" column="alert_type" />
         <result property="alertMessage" column="alert_message" />
         <result property="alertTime" column="alert_time" />
-        <result property="extJson" column="ext_json" />
         <result property="delFlag" column="del_flag" />
         <result property="createBy" column="create_by" />
         <result property="createTime" column="create_time" />
@@ -25,9 +23,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <select id="selectMonitorAlertRecordList" parameterType="com.ruoyi.system.domain.MonitorAlertRecord" resultMap="MonitorAlertRecordResult">
-        select r.id, r.app_id, a.product_name, a.app_name, a.app_link, a.store_platform,
+        select r.id, r.app_id, a.product_name, a.app_link, a.store_platform,
                r.channel_type, r.alert_type, r.alert_message, r.alert_time,
-               cast(r.ext_json as char) as ext_json, r.del_flag, r.create_by,
+               r.del_flag, r.create_by,
                r.create_time, r.update_by, r.update_time, r.remark
         from monitor_alert_record r
         left join monitor_app a on a.id = r.app_id
@@ -35,7 +33,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             r.del_flag = '0'
             <if test="keyword != null and keyword != ''">
                 and (a.product_name like concat('%', #{keyword}, '%')
-                or a.app_name like concat('%', #{keyword}, '%')
                 or a.app_link like concat('%', #{keyword}, '%'))
             </if>
             <if test="channelType != null and channelType != ''">
@@ -54,13 +51,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertMonitorAlertRecord" parameterType="com.ruoyi.system.domain.MonitorAlertRecord" useGeneratedKeys="true" keyProperty="id">
         insert into monitor_alert_record(
             app_id, channel_type, alert_type, alert_message, alert_time,
-            <if test="extJson != null and extJson != ''">ext_json,</if>
             <if test="remark != null and remark != ''">remark,</if>
             <if test="createBy != null and createBy != ''">create_by,</if>
             create_time
         ) values (
             #{appId}, #{channelType}, #{alertType}, #{alertMessage}, #{alertTime},
-            <if test="extJson != null and extJson != ''">#{extJson},</if>
             <if test="remark != null and remark != ''">#{remark},</if>
             <if test="createBy != null and createBy != ''">#{createBy},</if>
             sysdate()

@@ -5,12 +5,12 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
 
 /**
- * Google Play 应用扫描结果
+ * Google Play 搴旂敤鎵弿缁撴灉
  */
 public class MonitorAppScanResultVo
 {
     private Long id;
-    private String appName;
+    private String productName;
     private String bundleId;
     private String region;
     private String scanMode;
@@ -26,8 +26,8 @@ public class MonitorAppScanResultVo
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public String getAppName() { return appName; }
-    public void setAppName(String appName) { this.appName = appName; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
     public String getBundleId() { return bundleId; }
     public void setBundleId(String bundleId) { this.bundleId = bundleId; }
     public String getRegion() { return region; }

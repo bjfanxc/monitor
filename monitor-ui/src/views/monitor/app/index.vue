@@ -3,42 +3,43 @@
     <el-row :gutter="16" class="overview-row">
       <el-col :xs="24" :sm="8">
         <el-card shadow="hover" class="overview-card">
-          <div class="overview-label">应用总数</div>
+          <div class="overview-label">产品总数</div>
           <div class="overview-value">{{ overview.totalApps || 0 }}</div>
         </el-card>
       </el-col>
       <el-col :xs="24" :sm="8">
         <el-card shadow="hover" class="overview-card online">
-          <div class="overview-label">上架应用</div>
+          <div class="overview-label">上架产品</div>
           <div class="overview-value">{{ overview.onlineApps || 0 }}</div>
         </el-card>
       </el-col>
       <el-col :xs="24" :sm="8">
         <el-card shadow="hover" class="overview-card offline">
-          <div class="overview-label">下架应用</div>
+          <div class="overview-label">下架产品</div>
           <div class="overview-value">{{ overview.offlineApps || 0 }}</div>
         </el-card>
       </el-col>
     </el-row>
 
     <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
-      <el-form-item label="关键字" prop="keyword">
+      <el-form-item label="关键词" prop="keyword">
         <el-input
           v-model="queryParams.keyword"
-          placeholder="请输入产品名称、应用名称或应用链接"
+          placeholder="请输入产品名称或应用链接"
           clearable
           style="width: 280px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="平台" prop="storePlatform">
-        <el-input
-          v-model="queryParams.storePlatform"
-          placeholder="请输入商店平台"
-          clearable
-          style="width: 220px"
-          @keyup.enter.native="handleQuery"
-        />
+        <el-select v-model="queryParams.storePlatform" placeholder="请选择商店平台" clearable style="width: 220px">
+          <el-option
+            v-for="item in storePlatformOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择状态" clearable style="width: 180px">
@@ -70,6 +71,15 @@
             @click="handleUpdate"
             v-hasPermi="['monitor:app:edit']"
           >修改</el-button>
+          <el-button
+            type="warning"
+            plain
+            icon="el-icon-connection"
+            size="mini"
+            :disabled="multiple"
+            @click="openAssignDialog(ids)"
+            v-hasPermi="['monitor:app:edit']"
+          >分配群组</el-button>
           <el-button
             type="danger"
             plain
@@ -103,21 +113,21 @@
     <el-table v-loading="loading" :data="appList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="ID" align="center" prop="id" width="80" />
-      <el-table-column label="产品名称" align="center" prop="productName" :show-overflow-tooltip="true" min-width="140" />
-      <el-table-column label="应用名称" align="center" prop="appName" :show-overflow-tooltip="true" min-width="140" />
-      <el-table-column label="应用链接" align="center" prop="appLink" :show-overflow-tooltip="true" min-width="260">
+      <el-table-column label="产品名称" align="center" prop="productName" min-width="180" :show-overflow-tooltip="true" />
+      <el-table-column label="应用链接" align="center" prop="appLink" min-width="260" :show-overflow-tooltip="true">
         <template slot-scope="scope">
           <a class="link-type" :href="scope.row.appLink" target="_blank" rel="noopener noreferrer">{{ scope.row.appLink }}</a>
         </template>
       </el-table-column>
-      <el-table-column label="平台" align="center" prop="storePlatform" width="120">
+      <el-table-column label="商店平台" align="center" prop="storePlatform" width="120">
         <template slot-scope="scope">
           <span>{{ storePlatformLabel(scope.row.storePlatform) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="告警配置" align="center" prop="ownerType" width="150">
+      <el-table-column label="通知群组" align="center" min-width="220">
         <template slot-scope="scope">
-          <span>{{ ownerTypeLabel(scope.row.ownerType) }}</span>
+          <span v-if="scope.row.alertChannelNames">{{ scope.row.alertChannelNames }}</span>
+          <span v-else class="empty-text">未分配</span>
         </template>
       </el-table-column>
       <el-table-column label="状态" align="center" width="110">
@@ -136,8 +146,8 @@
           <span>{{ parseTime(scope.row.lastScanTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" :show-overflow-tooltip="true" min-width="180" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="180">
+      <el-table-column label="备注" align="center" prop="remark" min-width="180" :show-overflow-tooltip="true" />
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="220">
         <template slot-scope="scope">
           <el-button
             size="mini"
@@ -146,6 +156,13 @@
             @click="handleUpdate(scope.row)"
             v-hasPermi="['monitor:app:edit']"
           >修改</el-button>
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-connection"
+            @click="openAssignDialog([scope.row.id])"
+            v-hasPermi="['monitor:app:edit']"
+          >分配群组</el-button>
           <el-button
             size="mini"
             type="text"
@@ -166,16 +183,11 @@
     />
 
     <el-dialog :title="title" :visible.sync="open" width="760px" append-to-body>
-      <el-form ref="form" class="app-edit-form" :model="form" :rules="rules" label-width="136px">
+      <el-form ref="form" class="app-edit-form" :model="form" :rules="rules" label-width="110px">
         <el-row :gutter="16" class="app-edit-grid">
           <el-col :span="12">
             <el-form-item label="产品名称" prop="productName">
               <el-input v-model="form.productName" placeholder="请输入产品名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="应用名称" prop="appName">
-              <el-input v-model="form.appName" placeholder="请输入应用名称" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -195,16 +207,25 @@
               <el-input v-model="form.appLink" type="textarea" :rows="3" resize="none" placeholder="请输入应用链接" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="告警配置" prop="ownerType">
-              <el-select v-model="form.ownerType" placeholder="请选择告警配置" style="width: 100%">
+          <el-col :span="24">
+            <el-form-item label="通知群组" prop="alertChannelIds">
+              <el-select
+                v-model="form.alertChannelIds"
+                multiple
+                collapse-tags
+                clearable
+                filterable
+                placeholder="可多选告警群组"
+                style="width: 100%"
+              >
                 <el-option
-                  v-for="item in ownerTypeOptions"
+                  v-for="item in alertChannelOptions"
                   :key="item.value"
                   :label="item.label"
                   :value="item.value"
                 />
               </el-select>
+              <div class="form-tip">一个产品支持分配到多个通知群组，未分配则不会发送群组告警。</div>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -228,7 +249,7 @@
       </div>
     </el-dialog>
 
-    <el-dialog title="导入应用" :visible.sync="importOpen" width="420px" append-to-body>
+    <el-dialog title="导入产品" :visible.sync="importOpen" width="420px" append-to-body>
       <el-upload
         ref="upload"
         drag
@@ -253,29 +274,66 @@
         <el-button @click="importOpen = false">取消</el-button>
       </div>
     </el-dialog>
+
+    <el-dialog :title="assignTitle" :visible.sync="assignOpen" width="520px" append-to-body>
+      <el-form label-width="92px">
+        <el-form-item label="通知群组">
+          <el-select
+            v-model="assignForm.channelIds"
+            multiple
+            collapse-tags
+            filterable
+            clearable
+            placeholder="请选择要通知的群组"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in alertChannelOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <div class="form-tip">取消所有选择后提交，表示清空这些产品的告警群组。</div>
+        </el-form-item>
+        <el-alert
+          :closable="false"
+          type="info"
+          show-icon
+          :title="'已选择 ' + assignForm.appIds.length + ' 个产品'"
+        />
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitAssign">确定</el-button>
+        <el-button @click="assignOpen = false">取消</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { getToken } from "@/utils/auth"
-import { addApp, changeAppStatus, delApp, getAppFormOptions, getAppOverview, listApp, updateApp } from "@/api/monitor/app"
+import { addApp, assignAppAlertChannels, changeAppStatus, delApp, getAppFormOptions, getAppOverview, listApp, updateApp } from "@/api/monitor/app"
 
 export default {
   name: "MonitorApp",
-  dicts: ["monitor_store_type", "monitor_area_type"],
+  dicts: ["monitor_store_type"],
   data() {
     return {
       loading: false,
       showSearch: true,
       total: 0,
       single: true,
+      multiple: true,
       ids: [],
       appList: [],
       overview: {},
       open: false,
       importOpen: false,
+      assignOpen: false,
       title: "",
-      ownerTypeOptions: [],
+      assignTitle: "分配通知群组",
+      alertChannelOptions: [],
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -284,6 +342,10 @@ export default {
         storePlatform: undefined
       },
       form: {},
+      assignForm: {
+        appIds: [],
+        channelIds: []
+      },
       upload: {
         isUploading: false,
         updateSupport: false,
@@ -292,10 +354,8 @@ export default {
       },
       rules: {
         productName: [{ required: true, message: "产品名称不能为空", trigger: "blur" }],
-        appName: [{ required: true, message: "应用名称不能为空", trigger: "blur" }],
         appLink: [{ required: true, message: "应用链接不能为空", trigger: "blur" }],
-        storePlatform: [{ required: true, message: "商店平台不能为空", trigger: "change" }],
-        ownerType: [{ required: true, message: "告警配置不能为空", trigger: "change" }]
+        storePlatform: [{ required: true, message: "商店平台不能为空", trigger: "change" }]
       }
     }
   },
@@ -305,7 +365,7 @@ export default {
         label: item.label,
         value: item.value
       }))
-    },
+    }
   },
   created() {
     this.getFormOptions()
@@ -316,9 +376,9 @@ export default {
     getFormOptions() {
       getAppFormOptions().then(response => {
         const data = response.data || {}
-        this.ownerTypeOptions = this.normalizeOptions(data.ownerTypes)
+        this.alertChannelOptions = this.normalizeOptions(data.alertChannels)
       }).catch(() => {
-        this.ownerTypeOptions = []
+        this.alertChannelOptions = []
       })
     },
     normalizeOptions(options) {
@@ -327,25 +387,11 @@ export default {
         .filter(item => item && item.value !== undefined && item.value !== null && item.value !== "")
         .map(item => ({
           label: item.label,
-          value: String(item.value)
+          value: Number(item.value)
         }))
-    },
-    ensureOptionExists(list, value) {
-      if (value === undefined || value === null || value === "") {
-        return list
-      }
-      const normalizedValue = String(value)
-      if (list.some(item => item.value === normalizedValue)) {
-        return list
-      }
-      return [...list, { label: normalizedValue, value: normalizedValue }]
     },
     storePlatformLabel(value) {
       const target = (this.dict.type.monitor_store_type || []).find(item => item.value === value)
-      return target ? target.label : value
-    },
-    ownerTypeLabel(value) {
-      const target = this.ownerTypeOptions.find(item => item.value === String(value))
       return target ? target.label : value
     },
     getOverview() {
@@ -367,10 +413,9 @@ export default {
       this.form = {
         id: undefined,
         productName: undefined,
-        appName: undefined,
         appLink: undefined,
         storePlatform: undefined,
-        ownerType: undefined,
+        alertChannelIds: [],
         status: 1,
         remark: undefined
       }
@@ -379,6 +424,7 @@ export default {
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.id)
       this.single = selection.length !== 1
+      this.multiple = selection.length === 0
     },
     handleQuery() {
       this.queryParams.pageNum = 1
@@ -390,22 +436,21 @@ export default {
     },
     handleAdd() {
       this.reset()
-      if (this.ownerTypeOptions.length === 1) {
-        this.form.ownerType = this.ownerTypeOptions[0].value
-      }
       this.open = true
-      this.title = "新增应用"
+      this.title = "新增产品"
     },
     handleUpdate(row) {
       this.reset()
       const current = row || this.appList.find(item => item.id === this.ids[0])
+      if (!current) {
+        return
+      }
       this.form = {
         ...current,
-        ownerType: current && current.ownerType !== undefined && current.ownerType !== null ? String(current.ownerType) : current.ownerType
+        alertChannelIds: Array.isArray(current.alertChannelIds) ? current.alertChannelIds.map(item => Number(item)) : []
       }
-      this.ownerTypeOptions = this.ensureOptionExists(this.ownerTypeOptions, this.form.ownerType)
       this.open = true
-      this.title = "修改应用"
+      this.title = "修改产品"
     },
     cancel() {
       this.open = false
@@ -418,7 +463,7 @@ export default {
         }
         const payload = {
           ...this.form,
-          ownerType: this.form.ownerType ? String(this.form.ownerType) : this.form.ownerType
+          alertChannelIds: (this.form.alertChannelIds || []).map(item => Number(item))
         }
         const request = payload.id ? updateApp(payload) : addApp(payload)
         request.then(() => {
@@ -435,7 +480,7 @@ export default {
       if (!target) {
         return
       }
-      this.$modal.confirm('确认删除应用 "' + target.appName + '" 吗？').then(() => {
+      this.$modal.confirm('确认删除产品 "' + target.productName + '" 吗？').then(() => {
         return delApp(target.id)
       }).then(() => {
         this.$modal.msgSuccess("删除成功")
@@ -445,7 +490,7 @@ export default {
     },
     handleStatusChange(row) {
       const text = row.status === 1 ? "上架" : "下架"
-      this.$modal.confirm('确认将应用 "' + row.appName + '" 设置为' + text + "状态吗？").then(() => {
+      this.$modal.confirm('确认将产品 "' + row.productName + '" 设置为' + text + '状态吗？').then(() => {
         return changeAppStatus({ id: row.id, status: row.status })
       }).then(() => {
         this.$modal.msgSuccess("状态修改成功")
@@ -479,8 +524,40 @@ export default {
         return
       }
       this.$alert(response.msg, "导入结果", { dangerouslyUseHTMLString: true })
+      const data = response.data || {}
       this.getOverview()
       this.getList()
+      this.getFormOptions()
+      if (this.alertChannelOptions.length > 0 && Array.isArray(data.handledIds) && data.handledIds.length > 0) {
+        this.openAssignDialog(data.handledIds, true)
+      }
+    },
+    openAssignDialog(appIds, fromImport = false) {
+      const normalizedIds = Array.isArray(appIds) ? appIds.filter(Boolean).map(item => Number(item)) : []
+      if (normalizedIds.length === 0) {
+        this.$modal.msgWarning("请先选择产品")
+        return
+      }
+      const selectedRows = this.appList.filter(item => normalizedIds.includes(item.id))
+      const currentChannelIds = fromImport || selectedRows.length !== 1
+        ? []
+        : ((selectedRows[0].alertChannelIds || []).map(item => Number(item)))
+      this.assignForm = {
+        appIds: normalizedIds,
+        channelIds: currentChannelIds
+      }
+      this.assignTitle = fromImport ? "导入完成，分配通知群组" : "分配通知群组"
+      this.assignOpen = true
+    },
+    submitAssign() {
+      assignAppAlertChannels({
+        appIds: this.assignForm.appIds,
+        channelIds: this.assignForm.channelIds
+      }).then(() => {
+        this.$modal.msgSuccess("分配成功")
+        this.assignOpen = false
+        this.getList()
+      })
     }
   }
 }
@@ -537,13 +614,14 @@ export default {
   white-space: nowrap;
 }
 
-.app-edit-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+.form-tip {
+  margin-top: 6px;
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.app-edit-grid > .el-col {
-  float: none;
+.empty-text {
+  color: #c0c4cc;
 }
 </style>

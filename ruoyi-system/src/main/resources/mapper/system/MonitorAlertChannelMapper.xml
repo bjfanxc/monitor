@@ -7,6 +7,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap id="MonitorAlertChannelResult" type="com.ruoyi.system.domain.MonitorAlertChannel">
         <id property="id" column="id" />
         <result property="channelType" column="channel_type" />
+        <result property="accessMode" column="access_mode" />
         <result property="name" column="name" />
         <result property="botToken" column="bot_token" />
         <result property="chatId" column="chat_id" />
@@ -20,7 +21,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectMonitorAlertChannelVo">
-        select id, channel_type, name, bot_token, chat_id, enabled,
+        select id, channel_type, access_mode, name, bot_token, chat_id, enabled,
                del_flag, create_by, create_time, update_by, update_time, remark
         from monitor_alert_channel
     </sql>
@@ -51,6 +52,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by update_time desc, create_time desc, id desc
     </select>
 
+    <select id="selectAlertChannelsByCreateBy" parameterType="String" resultMap="MonitorAlertChannelResult">
+        <include refid="selectMonitorAlertChannelVo" />
+        where channel_type = 'telegram'
+          and del_flag = '0'
+          and create_by = #{createBy}
+        order by enabled desc, update_time desc, create_time desc, id desc
+    </select>
+
     <select id="selectEnabledTelegramChannelsByCreateBy" parameterType="String" resultMap="MonitorAlertChannelResult">
         <include refid="selectMonitorAlertChannelVo" />
         where channel_type = 'telegram'
@@ -58,6 +67,29 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and del_flag = '0'
           and create_by = #{createBy}
         order by update_time desc, create_time desc, id desc
+    </select>
+
+    <select id="selectAssignedChannelsByAppId" parameterType="Long" resultMap="MonitorAlertChannelResult">
+        select c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
+               c.del_flag, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
+        from monitor_alert_channel c
+        inner join monitor_app_alert_channel ac on ac.channel_id = c.id
+        where ac.app_id = #{appId}
+          and c.channel_type = 'telegram'
+          and c.del_flag = '0'
+        order by c.enabled desc, c.update_time desc, c.create_time desc, c.id desc
+    </select>
+
+    <select id="selectEnabledChannelsByAppId" parameterType="Long" resultMap="MonitorAlertChannelResult">
+        select c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
+               c.del_flag, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
+        from monitor_alert_channel c
+        inner join monitor_app_alert_channel ac on ac.channel_id = c.id
+        where ac.app_id = #{appId}
+          and c.channel_type = 'telegram'
+          and c.enabled = 1
+          and c.del_flag = '0'
+        order by c.update_time desc, c.create_time desc, c.id desc
     </select>
 
     <select id="selectTelegramChannelByChatId" parameterType="String" resultMap="MonitorAlertChannelResult">
@@ -71,6 +103,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertMonitorAlertChannel" parameterType="com.ruoyi.system.domain.MonitorAlertChannel" useGeneratedKeys="true" keyProperty="id">
         insert into monitor_alert_channel(
             <if test="channelType != null and channelType != ''">channel_type,</if>
+            <if test="accessMode != null and accessMode != ''">access_mode,</if>
             <if test="name != null and name != ''">name,</if>
             <if test="botToken != null and botToken != ''">bot_token,</if>
             <if test="chatId != null and chatId != ''">chat_id,</if>
@@ -80,6 +113,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             create_time
         ) values (
             <if test="channelType != null and channelType != ''">#{channelType},</if>
+            <if test="accessMode != null and accessMode != ''">#{accessMode},</if>
             <if test="name != null and name != ''">#{name},</if>
             <if test="botToken != null and botToken != ''">#{botToken},</if>
             <if test="chatId != null and chatId != ''">#{chatId},</if>
@@ -93,11 +127,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateMonitorAlertChannel" parameterType="com.ruoyi.system.domain.MonitorAlertChannel">
         update monitor_alert_channel
         <set>
+            <if test="accessMode != null and accessMode != ''">access_mode = #{accessMode},</if>
             <if test="name != null and name != ''">name = #{name},</if>
-            <if test="botToken != null and botToken != ''">bot_token = #{botToken},</if>
+            <if test="botToken != null">bot_token = #{botToken},</if>
             <if test="chatId != null and chatId != ''">chat_id = #{chatId},</if>
             <if test="enabled != null">enabled = #{enabled},</if>
-            <if test="createBy != null and createBy != ''">create_by = #{createBy},</if>
             <if test="remark != null">remark = #{remark},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
             update_time = sysdate()

@@ -19,7 +19,7 @@ export function addAlertChannel(data) {
   return request({
     url: "/monitor/alert/channel/telegram",
     method: "post",
-    data: data
+    data
   })
 }
 
@@ -27,7 +27,7 @@ export function updateAlertChannel(data) {
   return request({
     url: "/monitor/alert/channel/telegram",
     method: "put",
-    data: data
+    data
   })
 }
 
