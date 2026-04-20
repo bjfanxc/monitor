@@ -152,7 +152,7 @@
     <el-dialog :title="title" :visible.sync="open" width="620px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="添加方式" prop="accessMode">
-          <el-radio-group v-model="form.accessMode">
+          <el-radio-group v-model="form.accessMode" @change="handleAccessModeChange">
             <el-radio label="webhook">平台机器人 Webhook</el-radio>
             <el-radio label="custom">自定义手动添加</el-radio>
           </el-radio-group>
@@ -170,8 +170,37 @@
           prop="botToken"
           :rules="[{ required: true, message: '机器人Token不能为空', trigger: 'blur' }]"
         >
-          <el-input v-model="form.botToken" placeholder="请输入你自己的机器人 Token" show-password />
+          <el-input
+            v-model="form.botToken"
+            placeholder="请输入你自己的机器人 Token"
+            show-password
+            @input="handleBotTokenInput"
+            @blur="handleBotTokenBlur"
+          />
           <div class="form-tip">自定义手动添加会使用你自己的机器人发送消息，因此 Token 为必填项。</div>
+        </el-form-item>
+        <el-form-item v-if="form.accessMode === 'custom'" label="可选群组">
+          <el-select
+            v-model="selectedDiscoveredChatId"
+            style="width: 100%"
+            clearable
+            filterable
+            :loading="discoverLoading"
+            :disabled="discoverLoading || discoveredChats.length === 0"
+            placeholder="输入 Token 后自动读取最近可见的群组/频道，选择后会自动回填群组名称和 Chat ID"
+            @change="handleDiscoveredChatChange"
+          >
+            <el-option
+              v-for="item in discoveredChats"
+              :key="item.chatId"
+              :label="`${item.name} (${item.chatId})`"
+              :value="item.chatId"
+            />
+          </el-select>
+          <div class="form-tip">
+            <span>机器人需要先在目标群组或频道里收到过消息，这里才能识别出来。</span>
+            <el-button type="text" :loading="discoverLoading" @click="fetchDiscoveredChats(true)">重新读取</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="状态" prop="enabled">
           <el-radio-group v-model="form.enabled">
@@ -192,7 +221,7 @@
 </template>
 
 <script>
-import { addAlertChannel, delAlertChannel, getAlertBindingInfo, listAlertChannel, updateAlertChannel } from "@/api/monitor/alertChannel"
+import { addAlertChannel, delAlertChannel, discoverTelegramChats, getAlertBindingInfo, listAlertChannel, updateAlertChannel } from "@/api/monitor/alertChannel"
 
 export default {
   name: "MonitorAlertChannel",
@@ -211,6 +240,10 @@ export default {
       ids: [],
       channelList: [],
       open: false,
+      discoverLoading: false,
+      discoveredChats: [],
+      selectedDiscoveredChatId: undefined,
+      lastDiscoveredToken: "",
       title: "",
       bindingInfo: {
         botLink: "",
@@ -267,6 +300,7 @@ export default {
         enabled: 1,
         remark: undefined
       }
+      this.resetDiscoveredChats()
       this.resetForm("form")
     },
     handleSelectionChange(selection) {
@@ -297,11 +331,70 @@ export default {
         accessMode: current.accessMode || "custom"
       }
       this.open = true
+      if (this.form.accessMode === "custom" && this.form.botToken) {
+        this.fetchDiscoveredChats(true)
+      }
       this.title = "修改告警群组"
     },
     cancel() {
       this.open = false
       this.reset()
+    },
+    handleAccessModeChange(value) {
+      if (value !== "custom") {
+        this.resetDiscoveredChats()
+      }
+    },
+    handleBotTokenInput() {
+      this.resetDiscoveredChats()
+    },
+    handleBotTokenBlur() {
+      this.fetchDiscoveredChats()
+    },
+    resetDiscoveredChats(resetToken = true) {
+      this.discoverLoading = false
+      this.discoveredChats = []
+      this.selectedDiscoveredChatId = undefined
+      if (resetToken) {
+        this.lastDiscoveredToken = ""
+      }
+    },
+    fetchDiscoveredChats(force = false) {
+      if (this.form.accessMode !== "custom") {
+        return
+      }
+      const token = (this.form.botToken || "").trim()
+      if (!token) {
+        this.resetDiscoveredChats()
+        return
+      }
+      if (!force && token === this.lastDiscoveredToken) {
+        return
+      }
+      this.discoverLoading = true
+      discoverTelegramChats({ botToken: token }).then(response => {
+        const chats = Array.isArray(response.data) ? response.data : []
+        this.discoveredChats = chats
+        this.lastDiscoveredToken = token
+        if (this.form.chatId && chats.some(item => item.chatId === this.form.chatId)) {
+          this.selectedDiscoveredChatId = this.form.chatId
+        } else {
+          this.selectedDiscoveredChatId = undefined
+        }
+      }).catch(() => {
+        this.discoveredChats = []
+        this.selectedDiscoveredChatId = undefined
+      }).finally(() => {
+        this.discoverLoading = false
+      })
+    },
+    handleDiscoveredChatChange(chatId) {
+      const selected = this.discoveredChats.find(item => item.chatId === chatId)
+      if (!selected) {
+        return
+      }
+      this.form.chatId = selected.chatId
+      this.form.name = selected.name
     },
     submitForm() {
       this.$refs.form.validate(valid => {

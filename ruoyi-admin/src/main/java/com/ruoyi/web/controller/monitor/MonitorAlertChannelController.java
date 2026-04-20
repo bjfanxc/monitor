@@ -8,6 +8,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
+import com.ruoyi.system.domain.dto.MonitorTelegramChatDiscoverDto;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
 import com.ruoyi.system.service.ISysConfigService;
 import org.slf4j.Logger;
@@ -63,6 +64,13 @@ public class MonitorAlertChannelController extends BaseController
         data.put("tokenConfigured", StringUtils.isNotBlank(sysConfigService.selectConfigByKey("monitor.telegram.botToken")));
         data.put("channels", monitorAlertChannelService.selectAlertChannelsByCurrentUser());
         return success(data);
+    }
+
+    @PreAuthorize("@ss.hasAnyPermi('monitor:alert:channel:list,monitor:alert:channel:add,monitor:alert:channel:edit')")
+    @PostMapping("/discoverChats")
+    public AjaxResult discoverChats(@Validated @RequestBody MonitorTelegramChatDiscoverDto request)
+    {
+        return success(monitorAlertChannelService.discoverTelegramChats(request.getBotToken()));
     }
 
     @Anonymous

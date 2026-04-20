@@ -15,6 +15,18 @@ export function getAlertBindingInfo() {
   })
 }
 
+export function discoverTelegramChats(data) {
+  return request({
+    url: "/monitor/alert/channel/telegram/discoverChats",
+    method: "post",
+    headers: {
+      repeatSubmit: false,
+      interval: 300
+    },
+    data
+  })
+}
+
 export function addAlertChannel(data) {
   return request({
     url: "/monitor/alert/channel/telegram",

@@ -1,12 +1,14 @@
 package com.ruoyi.system.service.impl;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
+import com.ruoyi.system.domain.vo.MonitorTelegramChatOptionVo;
 import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.mapper.SysUserMapper;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
@@ -14,8 +16,16 @@ import com.ruoyi.system.service.ISysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelService
@@ -26,6 +36,9 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     private static final String TELEGRAM_BOT_TOKEN_CONFIG_KEY = "monitor.telegram.botToken";
     private static final String TELEGRAM_BIND_KEYWORD_CONFIG_KEY = "monitor.telegram.bindKeyword";
     private static final String WEBHOOK_OPERATOR = "telegram-webhook";
+    private static final HttpClient TELEGRAM_HTTP_CLIENT = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
 
     @Autowired
     private MonitorAlertChannelMapper monitorAlertChannelMapper;
@@ -59,6 +72,54 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
             return monitorAlertChannelMapper.selectTelegramChannelList(query);
         }
         return monitorAlertChannelMapper.selectAlertChannelsByCreateBy(username);
+    }
+
+    @Override
+    public List<MonitorTelegramChatOptionVo> discoverTelegramChats(String botToken)
+    {
+        String normalizedToken = StringUtils.trim(botToken);
+        if (StringUtils.isBlank(normalizedToken))
+        {
+            throw new ServiceException("Bot token cannot be empty");
+        }
+        JSONObject response = requestTelegramUpdates(normalizedToken);
+        JSONArray result = response.getJSONArray("result");
+        if (result == null || result.isEmpty())
+        {
+            return new ArrayList<>();
+        }
+        Map<String, MonitorTelegramChatOptionVo> optionMap = new LinkedHashMap<>();
+        for (int i = result.size() - 1; i >= 0; i--)
+        {
+            JSONObject update = result.getJSONObject(i);
+            JSONObject message = firstMessageNode(update);
+            if (message == null)
+            {
+                continue;
+            }
+            JSONObject chat = message.getJSONObject("chat");
+            if (chat == null || chat.get("id") == null)
+            {
+                continue;
+            }
+            String chatType = StringUtils.trim(chat.getString("type"));
+            if (!shouldIncludeChat(chatType))
+            {
+                continue;
+            }
+            String chatId = String.valueOf(chat.get("id"));
+            if (optionMap.containsKey(chatId))
+            {
+                continue;
+            }
+            MonitorTelegramChatOptionVo option = new MonitorTelegramChatOptionVo();
+            option.setChatId(chatId);
+            option.setChatType(chatType);
+            String chatName = resolveChatName(chat);
+            option.setName(StringUtils.isNotBlank(chatName) ? chatName : chatId);
+            optionMap.put(chatId, option);
+        }
+        return new ArrayList<>(optionMap.values());
     }
 
     @Override
@@ -214,6 +275,62 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
             return message;
         }
         return root.getJSONObject("edited_channel_post");
+    }
+
+    private JSONObject requestTelegramUpdates(String botToken)
+    {
+        String requestUrl = "https://api.telegram.org/bot" + botToken + "/getUpdates?limit=100";
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(requestUrl))
+            .timeout(Duration.ofSeconds(8))
+            .GET()
+            .build();
+        try
+        {
+            HttpResponse<String> response = TELEGRAM_HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            JSONObject responseBody = JSON.parseObject(response.body());
+            if (response.statusCode() >= 400)
+            {
+                throw new ServiceException(buildTelegramRequestError(response.statusCode(), responseBody));
+            }
+            if (responseBody == null)
+            {
+                throw new ServiceException("Telegram returned an empty response");
+            }
+            if (!responseBody.getBooleanValue("ok"))
+            {
+                throw new ServiceException(StringUtils.defaultIfBlank(responseBody.getString("description"), "Failed to read Telegram chats"));
+            }
+            return responseBody;
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+            throw new ServiceException("Telegram request interrupted");
+        }
+        catch (IOException e)
+        {
+            throw new ServiceException("Telegram request failed: " + e.getMessage());
+        }
+    }
+
+    private String buildTelegramRequestError(int statusCode, JSONObject responseBody)
+    {
+        String description = responseBody == null ? "" : StringUtils.trim(responseBody.getString("description"));
+        if (statusCode == 409)
+        {
+            return "This bot is currently using a Telegram webhook, so chat discovery is unavailable. Please disable the webhook for this bot first, or fill in Chat ID manually.";
+        }
+        if (StringUtils.isNotBlank(description))
+        {
+            return description;
+        }
+        return "Telegram request failed: HTTP " + statusCode;
+    }
+
+    private boolean shouldIncludeChat(String chatType)
+    {
+        return StringUtils.equalsAnyIgnoreCase(chatType, "group", "supergroup", "channel");
     }
 
 /*    private String extractBindTarget(String text)
