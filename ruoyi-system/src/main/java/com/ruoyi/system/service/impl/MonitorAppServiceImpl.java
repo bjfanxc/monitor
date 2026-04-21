@@ -510,11 +510,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService
 
     private String resolveTelegramBotToken(MonitorAlertChannel channel)
     {
-        String globalToken = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY));
-        if (StringUtils.isNotBlank(globalToken))
-        {
-            return globalToken;
-        }
         return channel == null ? StringUtils.EMPTY : StringUtils.trim(channel.getBotToken());
     }
 
@@ -524,22 +519,10 @@ public class MonitorAppServiceImpl implements IMonitorAppService
         String statusLabel = "OFFLINE".equals(statusText) ? "异常 / 已下架" : "正常 / 已恢复";
         String productName = monitorApp == null ? StringUtils.EMPTY : StringUtils.defaultString(monitorApp.getProductName());
         String template = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_ALERT_TEMPLATE_CONFIG_KEY));
-        if (StringUtils.isBlank(template))
-        {
-            template = "🚨🚨🚨 <b>${alertTitle}</b> 🚨🚨🚨\n"
-                + "━━━━━━━━━━━━━━━━━━\n"
-                + "🔴 <b>当前状态：</b><code>${statusLabel}</code>\n"
-                + "📦 <b>产品名称：</b>${productName}\n"
-                + "🔗 <b>详情链接：</b><a href=\"${detailUrl}\">打开 Google Play</a>\n"
-                + "📝 <b>异常说明：</b>${detailMessage}\n"
-                + "━━━━━━━━━━━━━━━━━━";
-        }
         return template
             .replace("${alertTitle}", escapeHtml(alertTitle))
-            .replace("${status}", escapeHtml(statusText))
             .replace("${statusLabel}", escapeHtml(statusLabel))
             .replace("${productName}", escapeHtml(productName))
-            .replace("${appName}", escapeHtml(productName))
             .replace("${detailUrl}", escapeHtmlAttribute(detailUrl))
             .replace("${detailMessage}", escapeHtml(detailMessage));
     }
