@@ -31,6 +31,11 @@ public class MonitorAlertChannel extends BaseEntity
 
     private String delFlag;
 
+    /**
+     * Only used for batch app-channel backfill.
+     */
+    private Long appId;
+
     public Long getId()
     {
         return id;
@@ -120,6 +125,16 @@ public class MonitorAlertChannel extends BaseEntity
         this.delFlag = delFlag;
     }
 
+    public Long getAppId()
+    {
+        return appId;
+    }
+
+    public void setAppId(Long appId)
+    {
+        this.appId = appId;
+    }
+
     @Override
     public String toString()
     {
@@ -132,6 +147,7 @@ public class MonitorAlertChannel extends BaseEntity
             .append("chatId", getChatId())
             .append("enabled", getEnabled())
             .append("delFlag", getDelFlag())
+            .append("appId", getAppId())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

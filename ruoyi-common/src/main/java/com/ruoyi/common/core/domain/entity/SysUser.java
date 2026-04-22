@@ -96,6 +96,22 @@ public class SysUser extends BaseEntity
     /** 角色ID */
     private Long roleId;
 
+    /** 套餐编码 */
+    private String planCode;
+
+    /** 套餐名称 */
+    private String planName;
+
+    /** 套餐到期时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date planExpireTime;
+
+    /** 应用数量 */
+    private Long appCount;
+
+    /** 群组数量 */
+    private Long alertChannelCount;
+
     public SysUser()
     {
 
@@ -310,6 +326,56 @@ public class SysUser extends BaseEntity
         this.roleId = roleId;
     }
 
+    public String getPlanCode()
+    {
+        return planCode;
+    }
+
+    public void setPlanCode(String planCode)
+    {
+        this.planCode = planCode;
+    }
+
+    public String getPlanName()
+    {
+        return planName;
+    }
+
+    public void setPlanName(String planName)
+    {
+        this.planName = planName;
+    }
+
+    public Date getPlanExpireTime()
+    {
+        return planExpireTime;
+    }
+
+    public void setPlanExpireTime(Date planExpireTime)
+    {
+        this.planExpireTime = planExpireTime;
+    }
+
+    public Long getAppCount()
+    {
+        return appCount;
+    }
+
+    public void setAppCount(Long appCount)
+    {
+        this.appCount = appCount;
+    }
+
+    public Long getAlertChannelCount()
+    {
+        return alertChannelCount;
+    }
+
+    public void setAlertChannelCount(Long alertChannelCount)
+    {
+        this.alertChannelCount = alertChannelCount;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -323,6 +389,11 @@ public class SysUser extends BaseEntity
             .append("avatar", getAvatar())
             .append("password", getPassword())
             .append("status", getStatus())
+            .append("planCode", getPlanCode())
+            .append("planName", getPlanName())
+            .append("planExpireTime", getPlanExpireTime())
+            .append("appCount", getAppCount())
+            .append("alertChannelCount", getAlertChannelCount())
             .append("delFlag", getDelFlag())
             .append("loginIp", getLoginIp())
             .append("loginDate", getLoginDate())

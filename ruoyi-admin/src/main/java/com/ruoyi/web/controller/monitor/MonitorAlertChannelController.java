@@ -10,6 +10,7 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.system.domain.MonitorAlertChannel;
 import com.ruoyi.system.domain.dto.MonitorTelegramChatDiscoverDto;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
+import com.ruoyi.system.service.IMonitorPlanService;
 import com.ruoyi.system.service.ISysConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +35,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/monitor/alert/channel/telegram")
-public class MonitorAlertChannelController extends BaseController
-{
+public class MonitorAlertChannelController extends BaseController {
     private static final Logger log = LoggerFactory.getLogger(MonitorAlertChannelController.class);
 
     @Autowired
@@ -44,10 +44,12 @@ public class MonitorAlertChannelController extends BaseController
     @Autowired
     private ISysConfigService sysConfigService;
 
+    @Autowired
+    private IMonitorPlanService monitorPlanService;
+
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:list')")
     @GetMapping("/list")
-    public TableDataInfo list(MonitorAlertChannel channel)
-    {
+    public TableDataInfo list(MonitorAlertChannel channel) {
         startPage();
         List<MonitorAlertChannel> list = monitorAlertChannelService.selectTelegramChannelList(channel);
         return getDataTable(list);
@@ -55,41 +57,35 @@ public class MonitorAlertChannelController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:list')")
     @GetMapping("/bindingInfo")
-    public AjaxResult bindingInfo()
-    {
+    public AjaxResult bindingInfo() {
         Map<String, Object> data = new LinkedHashMap<>(5);
         data.put("botLink", sysConfigService.selectConfigByKey("monitor.telegram.botLink"));
         data.put("botUsername", sysConfigService.selectConfigByKey("monitor.telegram.botUsername"));
         data.put("bindKeyword", sysConfigService.selectConfigByKey("monitor.telegram.bindKeyword"));
         data.put("tokenConfigured", StringUtils.isNotBlank(sysConfigService.selectConfigByKey("monitor.telegram.botToken")));
         data.put("channels", monitorAlertChannelService.selectAlertChannelsByCurrentUser());
+        data.put("quota", monitorPlanService.buildCurrentUserQuota());
         return success(data);
     }
 
     @PreAuthorize("@ss.hasAnyPermi('monitor:alert:channel:list,monitor:alert:channel:add,monitor:alert:channel:edit')")
     @PostMapping("/discoverChats")
-    public AjaxResult discoverChats(@Validated @RequestBody MonitorTelegramChatDiscoverDto request)
-    {
+    public AjaxResult discoverChats(@Validated @RequestBody MonitorTelegramChatDiscoverDto request) {
         return success(monitorAlertChannelService.discoverTelegramChats(request.getBotToken()));
     }
 
     @Anonymous
     @PostMapping("/webhook")
     public ResponseEntity<AjaxResult> webhook(@RequestBody(required = false) String payload,
-                                              @RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secretToken)
-    {
+                                              @RequestHeader(value = "X-Telegram-Bot-Api-Secret-Token", required = false) String secretToken) {
         log.info("webhook payload={}, secret token={}", payload, secretToken);
         String configuredSecret = sysConfigService.selectConfigByKey("monitor.telegram.webhookSecret");
-        if (StringUtils.isNotBlank(configuredSecret) && !configuredSecret.equals(secretToken))
-        {
+        if (StringUtils.isNotBlank(configuredSecret) && !configuredSecret.equals(secretToken)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(AjaxResult.error("invalid webhook secret"));
         }
-        try
-        {
+        try {
             return ResponseEntity.ok(AjaxResult.success(monitorAlertChannelService.handleTelegramWebhook(payload)));
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             return ResponseEntity.ok(AjaxResult.error(e.getMessage()));
         }
     }
@@ -97,8 +93,7 @@ public class MonitorAlertChannelController extends BaseController
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:add')")
     @Log(title = "告警群组", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody MonitorAlertChannel channel)
-    {
+    public AjaxResult add(@Validated @RequestBody MonitorAlertChannel channel) {
         channel.setCreateBy(getUsername());
         return toAjax(monitorAlertChannelService.insertMonitorAlertChannel(channel));
     }
@@ -106,8 +101,7 @@ public class MonitorAlertChannelController extends BaseController
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:edit')")
     @Log(title = "告警群组", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody MonitorAlertChannel channel)
-    {
+    public AjaxResult edit(@Validated @RequestBody MonitorAlertChannel channel) {
         channel.setUpdateBy(getUsername());
         return toAjax(monitorAlertChannelService.updateMonitorAlertChannel(channel));
     }
@@ -115,8 +109,7 @@ public class MonitorAlertChannelController extends BaseController
     @PreAuthorize("@ss.hasPermi('monitor:alert:channel:remove')")
     @Log(title = "告警群组", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
-    public AjaxResult remove(@PathVariable Long id)
-    {
+    public AjaxResult remove(@PathVariable Long id) {
         return toAjax(monitorAlertChannelService.deleteMonitorAlertChannelById(id));
     }
 }

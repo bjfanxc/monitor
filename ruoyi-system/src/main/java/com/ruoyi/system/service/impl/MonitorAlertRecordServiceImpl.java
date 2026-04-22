@@ -13,16 +13,13 @@ import java.util.List;
  * 告警记录服务实现
  */
 @Service
-public class MonitorAlertRecordServiceImpl implements IMonitorAlertRecordService
-{
+public class MonitorAlertRecordServiceImpl implements IMonitorAlertRecordService {
     @Autowired
     private MonitorAlertRecordMapper monitorAlertRecordMapper;
 
     @Override
-    public List<MonitorAlertRecord> selectMonitorAlertRecordList(MonitorAlertRecord alertRecord)
-    {
-        if (!SecurityUtils.isAdmin())
-        {
+    public List<MonitorAlertRecord> selectMonitorAlertRecordList(MonitorAlertRecord alertRecord) {
+        if (!SecurityUtils.isAdmin()) {
             alertRecord.getParams().put("currentUsername", SecurityUtils.getUsername());
         }
         return monitorAlertRecordMapper.selectMonitorAlertRecordList(alertRecord);

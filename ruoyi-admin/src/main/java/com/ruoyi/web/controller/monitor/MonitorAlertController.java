@@ -17,8 +17,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/monitor/alert")
-public class MonitorAlertController extends BaseController
-{
+public class MonitorAlertController extends BaseController {
     @Autowired
     private IMonitorAlertRecordService monitorAlertRecordService;
 
@@ -27,8 +26,7 @@ public class MonitorAlertController extends BaseController
      */
     @PreAuthorize("@ss.hasPermi('monitor:alert:list')")
     @GetMapping("/list")
-    public TableDataInfo list(MonitorAlertRecord alertRecord)
-    {
+    public TableDataInfo list(MonitorAlertRecord alertRecord) {
         startPage();
         List<MonitorAlertRecord> list = monitorAlertRecordService.selectMonitorAlertRecordList(alertRecord);
         return getDataTable(list);

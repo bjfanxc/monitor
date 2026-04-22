@@ -12,6 +12,7 @@ import com.ruoyi.system.domain.vo.MonitorTelegramChatOptionVo;
 import com.ruoyi.system.mapper.MonitorAlertChannelMapper;
 import com.ruoyi.system.mapper.SysUserMapper;
 import com.ruoyi.system.service.IMonitorAlertChannelService;
+import com.ruoyi.system.service.IMonitorPlanService;
 import com.ruoyi.system.service.ISysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,8 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelService
-{
+public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelService {
     private static final String TELEGRAM = "telegram";
     private static final String ACCESS_MODE_WEBHOOK = "webhook";
     private static final String ACCESS_MODE_CUSTOM = "custom";
@@ -37,8 +37,8 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     private static final String TELEGRAM_BIND_KEYWORD_CONFIG_KEY = "monitor.telegram.bindKeyword";
     private static final String WEBHOOK_OPERATOR = "telegram-webhook";
     private static final HttpClient TELEGRAM_HTTP_CLIENT = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
-        .build();
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     @Autowired
     private MonitorAlertChannelMapper monitorAlertChannelMapper;
@@ -49,24 +49,23 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     @Autowired
     private ISysConfigService sysConfigService;
 
+    @Autowired
+    private IMonitorPlanService monitorPlanService;
+
     @Override
-    public List<MonitorAlertChannel> selectTelegramChannelList(MonitorAlertChannel channel)
-    {
+    public List<MonitorAlertChannel> selectTelegramChannelList(MonitorAlertChannel channel) {
         channel.setChannelType(TELEGRAM);
         applyDataPermission(channel);
         return monitorAlertChannelMapper.selectTelegramChannelList(channel);
     }
 
     @Override
-    public List<MonitorAlertChannel> selectAlertChannelsByCurrentUser()
-    {
+    public List<MonitorAlertChannel> selectAlertChannelsByCurrentUser() {
         String username = SecurityUtils.getUsername();
-        if (StringUtils.isBlank(username))
-        {
+        if (StringUtils.isBlank(username)) {
             return new ArrayList<>();
         }
-        if (SecurityUtils.isAdmin())
-        {
+        if (SecurityUtils.isAdmin()) {
             MonitorAlertChannel query = new MonitorAlertChannel();
             query.setChannelType(TELEGRAM);
             return monitorAlertChannelMapper.selectTelegramChannelList(query);
@@ -75,41 +74,33 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     }
 
     @Override
-    public List<MonitorTelegramChatOptionVo> discoverTelegramChats(String botToken)
-    {
+    public List<MonitorTelegramChatOptionVo> discoverTelegramChats(String botToken) {
         String normalizedToken = StringUtils.trim(botToken);
-        if (StringUtils.isBlank(normalizedToken))
-        {
+        if (StringUtils.isBlank(normalizedToken)) {
             throw new ServiceException("Bot token cannot be empty");
         }
         JSONObject response = requestTelegramUpdates(normalizedToken);
         JSONArray result = response.getJSONArray("result");
-        if (result == null || result.isEmpty())
-        {
+        if (result == null || result.isEmpty()) {
             return new ArrayList<>();
         }
         Map<String, MonitorTelegramChatOptionVo> optionMap = new LinkedHashMap<>();
-        for (int i = result.size() - 1; i >= 0; i--)
-        {
+        for (int i = result.size() - 1; i >= 0; i--) {
             JSONObject update = result.getJSONObject(i);
             JSONObject message = firstMessageNode(update);
-            if (message == null)
-            {
+            if (message == null) {
                 continue;
             }
             JSONObject chat = message.getJSONObject("chat");
-            if (chat == null || chat.get("id") == null)
-            {
+            if (chat == null || chat.get("id") == null) {
                 continue;
             }
             String chatType = StringUtils.trim(chat.getString("type"));
-            if (!shouldIncludeChat(chatType))
-            {
+            if (!shouldIncludeChat(chatType)) {
                 continue;
             }
             String chatId = String.valueOf(chat.get("id"));
-            if (optionMap.containsKey(chatId))
-            {
+            if (optionMap.containsKey(chatId)) {
                 continue;
             }
             MonitorTelegramChatOptionVo option = new MonitorTelegramChatOptionVo();
@@ -123,24 +114,21 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     }
 
     @Override
-    public int insertMonitorAlertChannel(MonitorAlertChannel channel)
-    {
+    public int insertMonitorAlertChannel(MonitorAlertChannel channel) {
         channel.setChannelType(TELEGRAM);
         normalizeChannel(channel, true);
+        monitorPlanService.checkAlertChannelQuota(channel.getCreateBy(), 1);
         return monitorAlertChannelMapper.insertMonitorAlertChannel(channel);
     }
 
     @Override
-    public int updateMonitorAlertChannel(MonitorAlertChannel channel)
-    {
-        if (channel.getId() == null)
-        {
+    public int updateMonitorAlertChannel(MonitorAlertChannel channel) {
+        if (channel.getId() == null) {
             throw new ServiceException("Channel ID cannot be empty");
         }
         MonitorAlertChannel existing = ensureMonitorAlertChannelExists(channel.getId());
         channel.setChannelType(TELEGRAM);
-        if (StringUtils.isBlank(channel.getCreateBy()))
-        {
+        if (StringUtils.isBlank(channel.getCreateBy())) {
             channel.setCreateBy(existing.getCreateBy());
         }
         normalizeChannel(channel, false);
@@ -148,50 +136,41 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     }
 
     @Override
-    public String handleTelegramWebhook(String payload)
-    {
+    public String handleTelegramWebhook(String payload) {
         JSONObject root = JSON.parseObject(payload);
-        if (root == null)
-        {
+        if (root == null) {
             return "ignored: empty payload";
         }
         JSONObject message = firstMessageNode(root);
-        if (message == null)
-        {
+        if (message == null) {
             return "ignored: no message node";
         }
 
         String text = StringUtils.trim(message.getString("text"));
-        if (StringUtils.isBlank(text))
-        {
+        if (StringUtils.isBlank(text)) {
             text = StringUtils.trim(message.getString("caption"));
         }
-        if (StringUtils.isBlank(text))
-        {
+        if (StringUtils.isBlank(text)) {
             return "ignored: no text";
         }
 
         String bindTarget = extractBindTarget(text);
-        if (StringUtils.isBlank(bindTarget))
-        {
+        if (StringUtils.isBlank(bindTarget)) {
             return "ignored: no bind command";
         }
 
         JSONObject chat = message.getJSONObject("chat");
-        if (chat == null || chat.get("id") == null)
-        {
+        if (chat == null || chat.get("id") == null) {
             throw new ServiceException("Telegram chatId missing");
         }
 
         String chatId = String.valueOf(chat.get("id"));
         String chatName = resolveChatName(chat);
         SysUser bindUser = resolveBindUser(bindTarget);
-        if (bindUser == null)
-        {
+        if (bindUser == null) {
             throw new ServiceException("No matching user found: " + bindTarget);
         }
-        if (!"0".equals(bindUser.getStatus()))
-        {
+        if (!"0".equals(bindUser.getStatus())) {
             throw new ServiceException("The target user is disabled and cannot be bound: " + bindTarget);
         }
 
@@ -200,153 +179,141 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
     }
 
     @Override
-    public int deleteMonitorAlertChannelById(Long id)
-    {
+    public int deleteMonitorAlertChannelById(Long id) {
         ensureMonitorAlertChannelExists(id);
         return monitorAlertChannelMapper.deleteMonitorAlertChannelById(id);
     }
 
-    private void normalizeChannel(MonitorAlertChannel channel, boolean isCreate)
-    {
-        if (channel == null)
-        {
+    private void normalizeChannel(MonitorAlertChannel channel, boolean isCreate) {
+        if (channel == null) {
             return;
         }
         channel.setName(StringUtils.trim(channel.getName()));
         channel.setChatId(StringUtils.trim(channel.getChatId()));
         channel.setBotToken(StringUtils.trim(channel.getBotToken()));
         channel.setAccessMode(StringUtils.defaultIfBlank(StringUtils.trim(channel.getAccessMode()), ACCESS_MODE_CUSTOM));
-        if (channel.getEnabled() == null)
-        {
+        if (channel.getEnabled() == null) {
             channel.setEnabled(1);
         }
-        if (!ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode()) && !ACCESS_MODE_CUSTOM.equals(channel.getAccessMode()))
-        {
+        if (!ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode()) && !ACCESS_MODE_CUSTOM.equals(channel.getAccessMode())) {
             throw new ServiceException("Unsupported channel access mode");
         }
-        if (ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode()))
-        {
+        if (ACCESS_MODE_WEBHOOK.equals(channel.getAccessMode())) {
             channel.setBotToken(StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BOT_TOKEN_CONFIG_KEY)));
-            if (StringUtils.isBlank(channel.getRemark()))
-            {
+            if (StringUtils.isBlank(channel.getRemark())) {
                 channel.setRemark("Platform bot webhook binding");
             }
-        }
-        else
-        {
-            if (StringUtils.isBlank(channel.getBotToken()))
-            {
+        } else {
+            if (StringUtils.isBlank(channel.getBotToken())) {
                 throw new ServiceException("Custom bot token cannot be empty");
             }
-            if (StringUtils.isBlank(channel.getRemark()))
-            {
+            if (StringUtils.isBlank(channel.getRemark())) {
                 channel.setRemark("Custom manual channel");
             }
         }
-        if (StringUtils.isBlank(channel.getName()))
-        {
+        if (StringUtils.isBlank(channel.getName())) {
             throw new ServiceException("Channel name cannot be empty");
         }
-        if (StringUtils.isBlank(channel.getChatId()))
-        {
+        if (StringUtils.isBlank(channel.getChatId())) {
             throw new ServiceException("Group Chat ID cannot be empty");
         }
-        if (isCreate && StringUtils.isBlank(channel.getCreateBy()))
-        {
+        if (isCreate && StringUtils.isBlank(channel.getCreateBy())) {
             channel.setCreateBy(SecurityUtils.getUsername());
         }
     }
 
-    private JSONObject firstMessageNode(JSONObject root)
-    {
+    private JSONObject firstMessageNode(JSONObject root) {
         JSONObject message = root.getJSONObject("message");
-        if (message != null)
-        {
+        if (message != null) {
             return message;
         }
         message = root.getJSONObject("channel_post");
-        if (message != null)
-        {
+        if (message != null) {
             return message;
         }
         message = root.getJSONObject("edited_message");
-        if (message != null)
-        {
+        if (message != null) {
             return message;
         }
         return root.getJSONObject("edited_channel_post");
     }
 
-    private JSONObject requestTelegramUpdates(String botToken)
-    {
+    private JSONObject requestTelegramUpdates(String botToken) {
         String requestUrl = "https://api.telegram.org/bot" + botToken + "/getUpdates?limit=100";
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(requestUrl))
-            .timeout(Duration.ofSeconds(8))
-            .GET()
-            .build();
-        try
-        {
+                .uri(URI.create(requestUrl))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+        try {
             HttpResponse<String> response = TELEGRAM_HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             JSONObject responseBody = JSON.parseObject(response.body());
-            if (response.statusCode() >= 400)
-            {
+            if (response.statusCode() >= 400) {
                 throw new ServiceException(buildTelegramRequestError(response.statusCode(), responseBody));
             }
-            if (responseBody == null)
-            {
+            if (responseBody == null) {
                 throw new ServiceException("Telegram returned an empty response");
             }
-            if (!responseBody.getBooleanValue("ok"))
-            {
+            if (!responseBody.getBooleanValue("ok")) {
                 throw new ServiceException(StringUtils.defaultIfBlank(responseBody.getString("description"), "Failed to read Telegram chats"));
             }
             return responseBody;
-        }
-        catch (InterruptedException e)
-        {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ServiceException("Telegram request interrupted");
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new ServiceException("Telegram request failed: " + e.getMessage());
         }
     }
 
-    private String buildTelegramRequestError(int statusCode, JSONObject responseBody)
-    {
+    private String buildTelegramRequestError(int statusCode, JSONObject responseBody) {
         String description = responseBody == null ? "" : StringUtils.trim(responseBody.getString("description"));
-        if (statusCode == 409)
-        {
+        if (statusCode == 409) {
             return "This bot is currently using a Telegram webhook, so chat discovery is unavailable. Please disable the webhook for this bot first, or fill in Chat ID manually.";
         }
-        if (StringUtils.isNotBlank(description))
-        {
+        if (StringUtils.isNotBlank(description)) {
             return description;
         }
         return "Telegram request failed: HTTP " + statusCode;
     }
 
-    private boolean shouldIncludeChat(String chatType)
-    {
+    private boolean shouldIncludeChat(String chatType) {
         return StringUtils.equalsAnyIgnoreCase(chatType, "group", "supergroup", "channel");
     }
 
-/*    private String extractBindTarget(String text)
-    {
-        String content = StringUtils.trim(text);
-        if (StringUtils.startsWithIgnoreCase(content, "/start"))
+    /*    private String extractBindTarget(String text)
         {
+            String content = StringUtils.trim(text);
+            if (StringUtils.startsWithIgnoreCase(content, "/start"))
+            {
+                content = StringUtils.trim(content.substring(6));
+            }
+            String bindKeyword = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BIND_KEYWORD_CONFIG_KEY));
+            if (StringUtils.isBlank(bindKeyword))
+            {
+                bindKeyword = "绑定机器人";
+            }
+            if (!StringUtils.startsWith(content, bindKeyword))
+            {
+                return null;
+            }
+            String target = StringUtils.substringAfter(content, bindKeyword);
+            target = StringUtils.removeStart(target, ":");
+            target = StringUtils.removeStart(target, "：");
+            return StringUtils.trim(target);
+        }
+
+    */
+    private String extractBindTarget(String text) {
+        String content = StringUtils.trim(text);
+        if (StringUtils.startsWithIgnoreCase(content, "/start")) {
             content = StringUtils.trim(content.substring(6));
         }
         String bindKeyword = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BIND_KEYWORD_CONFIG_KEY));
-        if (StringUtils.isBlank(bindKeyword))
-        {
+        if (StringUtils.isBlank(bindKeyword)) {
             bindKeyword = "绑定机器人";
         }
-        if (!StringUtils.startsWith(content, bindKeyword))
-        {
+        if (!StringUtils.startsWith(content, bindKeyword)) {
             return null;
         }
         String target = StringUtils.substringAfter(content, bindKeyword);
@@ -355,52 +322,23 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         return StringUtils.trim(target);
     }
 
-*/
-    private String extractBindTarget(String text)
-    {
-        String content = StringUtils.trim(text);
-        if (StringUtils.startsWithIgnoreCase(content, "/start"))
-        {
-            content = StringUtils.trim(content.substring(6));
-        }
-        String bindKeyword = StringUtils.trim(sysConfigService.selectConfigByKey(TELEGRAM_BIND_KEYWORD_CONFIG_KEY));
-        if (StringUtils.isBlank(bindKeyword))
-        {
-            bindKeyword = "绑定机器人";
-        }
-        if (!StringUtils.startsWith(content, bindKeyword))
-        {
+    private SysUser resolveBindUser(String bindTarget) {
+        if (StringUtils.isBlank(bindTarget)) {
             return null;
         }
-        String target = StringUtils.substringAfter(content, bindKeyword);
-        target = StringUtils.removeStart(target, ":");
-        target = StringUtils.removeStart(target, "：");
-        return StringUtils.trim(target);
-    }
-
-    private SysUser resolveBindUser(String bindTarget)
-    {
-        if (StringUtils.isBlank(bindTarget))
-        {
-            return null;
-        }
-        if (StringUtils.contains(bindTarget, "@"))
-        {
+        if (StringUtils.contains(bindTarget, "@")) {
             return sysUserMapper.checkEmailUnique(bindTarget);
         }
         return sysUserMapper.selectUserByUserName(bindTarget);
     }
 
-    private String resolveChatName(JSONObject chat)
-    {
+    private String resolveChatName(JSONObject chat) {
         String title = StringUtils.trim(chat.getString("title"));
-        if (StringUtils.isNotBlank(title))
-        {
+        if (StringUtils.isNotBlank(title)) {
             return title;
         }
         String username = StringUtils.trim(chat.getString("username"));
-        if (StringUtils.isNotBlank(username))
-        {
+        if (StringUtils.isNotBlank(username)) {
             return username;
         }
         String firstName = StringUtils.trim(chat.getString("first_name"));
@@ -408,8 +346,7 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         return StringUtils.trim((StringUtils.defaultString(firstName) + " " + StringUtils.defaultString(lastName)).trim());
     }
 
-    private void bindTelegramChat(SysUser bindUser, String chatId, String chatName)
-    {
+    private void bindTelegramChat(SysUser bindUser, String chatId, String chatName) {
         MonitorAlertChannel channel = new MonitorAlertChannel();
         channel.setChannelType(TELEGRAM);
         channel.setAccessMode(ACCESS_MODE_WEBHOOK);
@@ -422,47 +359,38 @@ public class MonitorAlertChannelServiceImpl implements IMonitorAlertChannelServi
         channel.setUpdateBy(WEBHOOK_OPERATOR);
 
         MonitorAlertChannel existing = monitorAlertChannelMapper.selectTelegramChannelByChatId(chatId);
-        if (existing == null)
-        {
+        if (existing == null) {
             monitorAlertChannelMapper.insertMonitorAlertChannel(channel);
             return;
         }
         channel.setId(existing.getId());
-        if (StringUtils.isBlank(channel.getName()))
-        {
+        if (StringUtils.isBlank(channel.getName())) {
             channel.setName(existing.getName());
         }
         monitorAlertChannelMapper.updateMonitorAlertChannel(channel);
     }
 
-    private MonitorAlertChannel ensureMonitorAlertChannelExists(Long id)
-    {
-        if (id == null)
-        {
+    private MonitorAlertChannel ensureMonitorAlertChannelExists(Long id) {
+        if (id == null) {
             throw new ServiceException("Channel ID cannot be empty");
         }
         MonitorAlertChannel channel = monitorAlertChannelMapper.selectMonitorAlertChannelById(id);
-        if (channel == null)
-        {
+        if (channel == null) {
             throw new ServiceException("Alert channel does not exist or has been deleted");
         }
         checkDataPermission(channel.getCreateBy());
         return channel;
     }
 
-    private void applyDataPermission(MonitorAlertChannel channel)
-    {
-        if (channel == null || SecurityUtils.isAdmin())
-        {
+    private void applyDataPermission(MonitorAlertChannel channel) {
+        if (channel == null || SecurityUtils.isAdmin()) {
             return;
         }
         channel.getParams().put("currentUsername", SecurityUtils.getUsername());
     }
 
-    private void checkDataPermission(String createBy)
-    {
-        if (!SecurityUtils.isAdmin() && !StringUtils.equals(SecurityUtils.getUsername(), createBy))
-        {
+    private void checkDataPermission(String createBy) {
+        if (!SecurityUtils.isAdmin() && !StringUtils.equals(SecurityUtils.getUsername(), createBy)) {
             throw new ServiceException("No permission to operate other users' data");
         }
     }

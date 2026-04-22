@@ -52,6 +52,8 @@ public interface SysUserMapper
      */
     public SysUser selectUserById(Long userId);
 
+    public long countUserByPlanCode(String planCode);
+
     /**
      * 新增用户信息
      * 
