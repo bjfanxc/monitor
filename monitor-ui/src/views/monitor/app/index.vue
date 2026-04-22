@@ -20,7 +20,6 @@
         </el-card>
       </el-col>
     </el-row>
-
     <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch" label-width="72px">
       <el-form-item label="关键词" prop="keyword">
         <el-input
@@ -411,6 +410,12 @@ export default {
         this.loading = false
       })
     },
+    refreshAppPageData() {
+      this.getFormOptions()
+      this.getOverview()
+      this.getList()
+      window.dispatchEvent(new Event("monitor-quota-refresh"))
+    },
     reset() {
       this.form = {
         id: undefined,
@@ -471,9 +476,7 @@ export default {
         request.then(() => {
           this.$modal.msgSuccess(payload.id ? "修改成功" : "新增成功")
           this.open = false
-          this.getFormOptions()
-          this.getOverview()
-          this.getList()
+          this.refreshAppPageData()
         })
       })
     },
@@ -486,8 +489,7 @@ export default {
         return delApp(target.id)
       }).then(() => {
         this.$modal.msgSuccess("删除成功")
-        this.getOverview()
-        this.getList()
+        this.refreshAppPageData()
       }).catch(() => {})
     },
     handleStatusChange(row) {
@@ -538,9 +540,7 @@ export default {
       }
       this.$alert(response.msg, "导入结果", { dangerouslyUseHTMLString: true })
       const data = response.data || {}
-      this.getOverview()
-      this.getList()
-      this.getFormOptions()
+      this.refreshAppPageData()
       if (this.alertChannelOptions.length > 0 && Array.isArray(data.handledIds) && data.handledIds.length > 0) {
         this.openAssignDialog(data.handledIds, true)
       }

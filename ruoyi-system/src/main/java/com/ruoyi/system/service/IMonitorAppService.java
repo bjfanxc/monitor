@@ -39,4 +39,6 @@ public interface IMonitorAppService
     List<MonitorAppScanResultVo> scanGooglePlayApps(String operator);
 
     List<MonitorAppScanResultVo> scanGooglePlayApps(String operator, String scanMode);
+
+    List<MonitorAppScanResultVo> scanDueGooglePlayApps(String operator, String scanMode);
 }

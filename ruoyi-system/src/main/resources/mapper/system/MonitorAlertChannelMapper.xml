@@ -6,6 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <resultMap id="MonitorAlertChannelResult" type="com.ruoyi.system.domain.MonitorAlertChannel">
         <id property="id" column="id" />
+        <result property="appId" column="app_id" />
         <result property="channelType" column="channel_type" />
         <result property="accessMode" column="access_mode" />
         <result property="name" column="name" />
@@ -69,8 +70,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by update_time desc, create_time desc, id desc
     </select>
 
+    <select id="countAlertChannelByCreateBy" parameterType="String" resultType="long">
+        select count(1)
+        from monitor_alert_channel
+        where channel_type = 'telegram'
+          and del_flag = '0'
+          and create_by = #{createBy}
+    </select>
+
     <select id="selectAssignedChannelsByAppId" parameterType="Long" resultMap="MonitorAlertChannelResult">
-        select c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
+        select ac.app_id, c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
                c.del_flag, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
         from monitor_alert_channel c
         inner join monitor_app_alert_channel ac on ac.channel_id = c.id
@@ -80,8 +89,22 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by c.enabled desc, c.update_time desc, c.create_time desc, c.id desc
     </select>
 
+    <select id="selectAssignedChannelsByAppIds" resultMap="MonitorAlertChannelResult">
+        select ac.app_id, c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
+               c.del_flag, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
+        from monitor_alert_channel c
+        inner join monitor_app_alert_channel ac on ac.channel_id = c.id
+        where ac.app_id in
+        <foreach collection="list" item="appId" open="(" separator="," close=")">
+            #{appId}
+        </foreach>
+          and c.channel_type = 'telegram'
+          and c.del_flag = '0'
+        order by ac.app_id asc, c.enabled desc, c.update_time desc, c.create_time desc, c.id desc
+    </select>
+
     <select id="selectEnabledChannelsByAppId" parameterType="Long" resultMap="MonitorAlertChannelResult">
-        select c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
+        select ac.app_id, c.id, c.channel_type, c.access_mode, c.name, c.bot_token, c.chat_id, c.enabled,
                c.del_flag, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
         from monitor_alert_channel c
         inner join monitor_app_alert_channel ac on ac.channel_id = c.id

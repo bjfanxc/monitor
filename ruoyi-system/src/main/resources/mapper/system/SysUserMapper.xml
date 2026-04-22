@@ -24,6 +24,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateBy"      column="update_by"       />
         <result property="updateTime"    column="update_time"     />
         <result property="remark"        column="remark"          />
+        <result property="planCode"      column="plan_code"       />
+        <result property="planName"      column="plan_name"       />
+        <result property="planExpireTime" column="plan_expire_time" />
+        <result property="appCount"      column="app_count"       />
+        <result property="alertChannelCount" column="alert_channel_count" />
         <association property="dept"     javaType="SysDept"         resultMap="deptResult" />
         <collection  property="roles"    javaType="java.util.List"  resultMap="RoleResult" />
     </resultMap>
@@ -48,18 +53,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 	
 	<sql id="selectUserVo">
-        select u.user_id, u.dept_id, u.user_name, u.nick_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.pwd_update_date, u.create_by, u.create_time, u.update_by, u.update_time, u.remark, 
+        select u.user_id, u.dept_id, u.user_name, u.nick_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.pwd_update_date, u.create_by, u.create_time, u.update_by, u.update_time, u.remark,
+        u.plan_code, u.plan_expire_time, p.plan_name,
+        (select count(1) from monitor_app ma where ma.del_flag = '0' and ma.create_by = u.user_name) as app_count,
+        (select count(1) from monitor_alert_channel mac where mac.del_flag = '0' and mac.channel_type = 'telegram' and mac.create_by = u.user_name) as alert_channel_count,
         d.dept_id, d.parent_id, d.ancestors, d.dept_name, d.order_num, d.leader, d.status as dept_status,
         r.role_id, r.role_name, r.role_key, r.role_sort, r.data_scope, r.status as role_status
         from sys_user u
 		    left join sys_dept d on u.dept_id = d.dept_id
+            left join monitor_plan p on u.plan_code = p.plan_code
 		    left join sys_user_role ur on u.user_id = ur.user_id
 		    left join sys_role r on r.role_id = ur.role_id
     </sql>
     
     <select id="selectUserList" parameterType="SysUser" resultMap="SysUserResult">
-		select u.user_id, u.dept_id, u.nick_name, u.user_name, u.email, u.avatar, u.phonenumber, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark, d.dept_name, d.leader from sys_user u
+		select u.user_id, u.dept_id, u.nick_name, u.user_name, u.email, u.avatar, u.phonenumber, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark,
+        u.plan_code, u.plan_expire_time, p.plan_name,
+        (select count(1) from monitor_app ma where ma.del_flag = '0' and ma.create_by = u.user_name) as app_count,
+        (select count(1) from monitor_alert_channel mac where mac.del_flag = '0' and mac.channel_type = 'telegram' and mac.create_by = u.user_name) as alert_channel_count,
+        d.dept_name, d.leader from sys_user u
 		left join sys_dept d on u.dept_id = d.dept_id
+        left join monitor_plan p on u.plan_code = p.plan_code
 		where u.del_flag = '0'
 		<if test="userId != null and userId != 0">
 			AND u.user_id = #{userId}
@@ -69,6 +83,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		</if>
 		<if test="status != null and status != ''">
 			AND u.status = #{status}
+		</if>
+		<if test="planCode != null and planCode != ''">
+			AND u.plan_code = #{planCode}
 		</if>
 		<if test="phonenumber != null and phonenumber != ''">
 			AND u.phonenumber like concat('%', #{phonenumber}, '%')
@@ -158,6 +175,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
  			<if test="pwdUpdateDate != null">pwd_update_date,</if>
  			<if test="createBy != null and createBy != ''">create_by,</if>
  			<if test="remark != null and remark != ''">remark,</if>
+            <if test="planCode != null and planCode != ''">plan_code,</if>
+            <if test="planExpireTime != null">plan_expire_time,</if>
  			create_time
  		)values(
  			<if test="userId != null and userId != ''">#{userId},</if>
@@ -173,6 +192,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
  			<if test="pwdUpdateDate != null">#{pwdUpdateDate},</if>
  			<if test="createBy != null and createBy != ''">#{createBy},</if>
  			<if test="remark != null and remark != ''">#{remark},</if>
+            <if test="planCode != null and planCode != ''">#{planCode},</if>
+            <if test="planExpireTime != null">#{planExpireTime},</if>
  			sysdate()
  		)
 	</insert>
@@ -192,6 +213,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
  			<if test="loginDate != null">login_date = #{loginDate},</if>
  			<if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
  			<if test="remark != null">remark = #{remark},</if>
+            plan_code = #{planCode},
+            plan_expire_time = #{planExpireTime},
  			update_time = sysdate()
  		</set>
  		where user_id = #{userId}
@@ -223,5 +246,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
  			#{userId}
         </foreach> 
  	</delete>
+
+    <select id="countUserByPlanCode" parameterType="String" resultType="long">
+        select count(1)
+        from sys_user
+        where del_flag = '0'
+          and plan_code = #{planCode}
+    </select>
 	
 </mapper> 

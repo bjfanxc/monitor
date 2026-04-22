@@ -11,11 +11,9 @@
 
     <div class="right-menu">
       <template v-if="device !== 'mobile'">
+        <header-quota />
         <screenfull id="screenfull" class="right-menu-item hover-effect" />
-
-        <el-tooltip content="Notifications" effect="dark" placement="bottom">
-          <header-notice id="header-notice" class="right-menu-item hover-effect" />
-        </el-tooltip>
+        <header-notice id="header-notice" class="right-menu-item hover-effect" />
       </template>
 
       <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="hover">
@@ -27,9 +25,9 @@
           <router-link to="/user/profile">
             <el-dropdown-item>个人中心</el-dropdown-item>
           </router-link>
-          <el-dropdown-item v-if="setting" @click.native="setLayout">
-            <span>布局设置</span>
-          </el-dropdown-item>
+<!--          <el-dropdown-item v-if="setting" @click.native="setLayout">-->
+<!--            <span>布局设置</span>-->
+<!--          </el-dropdown-item>-->
           <el-dropdown-item @click.native="lockScreen">
             <span>锁定屏幕</span>
           </el-dropdown-item>
@@ -51,6 +49,7 @@ import Logo from "./Sidebar/Logo"
 import Hamburger from "@/components/Hamburger"
 import Screenfull from "@/components/Screenfull"
 import HeaderNotice from "./HeaderNotice"
+import HeaderQuota from "./HeaderQuota"
 
 export default {
   components: {
@@ -60,7 +59,8 @@ export default {
     TopBar,
     Hamburger,
     Screenfull,
-    HeaderNotice
+    HeaderNotice,
+    HeaderQuota
   },
   computed: {
     ...mapGetters([

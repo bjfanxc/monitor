@@ -16,7 +16,11 @@ public interface MonitorAppMapper
 
     List<MonitorApp> selectMonitorAppList(MonitorApp monitorApp);
 
+    Long countMonitorAppByCreateBy(String createBy);
+
     MonitorApp selectMonitorAppByUniqueKey(MonitorApp monitorApp);
+
+    List<MonitorApp> selectAppsForScan(Integer status);
 
     int insertMonitorApp(MonitorApp monitorApp);
 

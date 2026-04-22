@@ -15,6 +15,11 @@
               <el-option v-for="dict in dict.type.sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
             </el-select>
           </el-form-item>
+          <el-form-item label="套餐" prop="planCode">
+            <el-select v-model="queryParams.planCode" placeholder="请选择套餐" clearable style="width: 220px">
+              <el-option v-for="item in planOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="创建时间">
             <el-date-picker v-model="dateRange" style="width: 240px" value-format="yyyy-MM-dd" type="daterange" range-separator="-" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
           </el-form-item>
@@ -46,6 +51,14 @@
           <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" v-if="columns.nickName.visible" :show-overflow-tooltip="true" min-width="120" />
           <el-table-column label="部门" align="center" key="deptName" prop="dept.deptName" v-if="columns.deptName.visible" :show-overflow-tooltip="true" min-width="130" />
           <el-table-column label="手机号码" align="center" key="phonenumber" prop="phonenumber" v-if="columns.phonenumber.visible" min-width="130" />
+          <el-table-column label="套餐" align="center" key="planName" prop="planName" v-if="columns.planName.visible" min-width="120" />
+          <el-table-column label="应用数" align="center" key="appCount" prop="appCount" v-if="columns.appCount.visible" min-width="90" />
+          <el-table-column label="群组数" align="center" key="alertChannelCount" prop="alertChannelCount" v-if="columns.alertChannelCount.visible" min-width="90" />
+          <el-table-column label="到期时间" align="center" key="planExpireTime" prop="planExpireTime" v-if="columns.planExpireTime.visible" min-width="170">
+            <template slot-scope="scope">
+              <span>{{ parseTime(scope.row.planExpireTime) || "-" }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" align="center" key="status" v-if="columns.status.visible" min-width="80">
             <template slot-scope="scope">
               <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)"></el-switch>
@@ -146,6 +159,20 @@
           </el-col>
         </el-row>
         <el-row>
+          <el-col :span="12">
+            <el-form-item label="套餐" prop="planCode">
+              <el-select v-model="form.planCode" clearable placeholder="请选择套餐" style="width: 100%">
+                <el-option v-for="item in planOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="到期时间" prop="planExpireTime">
+              <el-date-picker v-model="form.planExpireTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" placeholder="请选择套餐到期时间" style="width: 100%" clearable />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="24">
             <el-form-item label="备注">
               <el-input v-model="form.remark" type="textarea" placeholder="请输入内容"></el-input>
@@ -210,6 +237,8 @@ export default {
       postOptions: [],
       // 角色选项
       roleOptions: [],
+      // 套餐选项
+      planOptions: [],
       // 表单参数
       form: {},
       // 查询参数
@@ -219,6 +248,7 @@ export default {
         userName: undefined,
         phonenumber: undefined,
         status: undefined,
+        planCode: undefined,
         deptId: undefined
       },
       // 列信息
@@ -228,6 +258,10 @@ export default {
         nickName: { label: '用户昵称', visible: true },
         deptName: { label: '部门', visible: true },
         phonenumber: { label: '手机号码', visible: true },
+        planName: { label: '套餐', visible: true },
+        appCount: { label: '应用数', visible: true },
+        alertChannelCount: { label: '群组数', visible: true },
+        planExpireTime: { label: '到期时间', visible: true },
         status: { label: '状态', visible: true },
         createTime: { label: '创建时间', visible: true }
       },
@@ -265,11 +299,20 @@ export default {
   created() {
     this.getList()
     this.getDeptTree()
+    this.loadPlanOptions()
     this.getConfigKey("sys.user.initPassword").then(response => {
       this.initPassword = response.msg
     })
   },
   methods: {
+    refreshCurrentQuota() {
+      window.dispatchEvent(new Event("monitor-quota-refresh"))
+    },
+    loadPlanOptions() {
+      getUser().then(response => {
+        this.planOptions = response.plans || []
+      })
+    },
     /** 查询用户列表 */
     getList() {
       this.loading = true
@@ -332,6 +375,8 @@ export default {
         sex: undefined,
         status: "0",
         remark: undefined,
+        planCode: undefined,
+        planExpireTime: undefined,
         postIds: [],
         roleIds: []
       }
@@ -375,6 +420,7 @@ export default {
       getUser().then(response => {
         this.postOptions = response.posts
         this.roleOptions = response.roles
+        this.planOptions = response.plans || []
         this.open = true
         this.title = "添加用户"
         this.form.password = this.initPassword
@@ -388,6 +434,7 @@ export default {
         this.form = response.data
         this.postOptions = response.posts
         this.roleOptions = response.roles
+        this.planOptions = response.plans || []
         this.$set(this.form, "postIds", response.postIds)
         this.$set(this.form, "roleIds", response.roleIds)
         this.open = true
@@ -428,12 +475,14 @@ export default {
               this.$modal.msgSuccess("修改成功")
               this.open = false
               this.getList()
+              this.refreshCurrentQuota()
             })
           } else {
             addUser(this.form).then(() => {
               this.$modal.msgSuccess("新增成功")
               this.open = false
               this.getList()
+              this.refreshCurrentQuota()
             })
           }
         }

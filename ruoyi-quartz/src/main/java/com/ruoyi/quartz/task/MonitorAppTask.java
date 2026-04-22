@@ -15,17 +15,17 @@ public class MonitorAppTask
 
     public void scanGooglePlayApps()
     {
-        monitorAppService.scanGooglePlayApps("system");
+        monitorAppService.scanDueGooglePlayApps("system", "http");
     }
 
     public void scanGooglePlayAppsByHttp()
     {
-        monitorAppService.scanGooglePlayApps("system", "http");
+        monitorAppService.scanDueGooglePlayApps("system", "http");
     }
 
     public void scanGooglePlayAppsByPlaywright()
     {
-        monitorAppService.scanGooglePlayApps("system", "playwright");
+        monitorAppService.scanDueGooglePlayApps("system", "playwright");
     }
 
     public void scanGooglePlayApp(Long appId)

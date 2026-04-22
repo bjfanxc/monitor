@@ -17,7 +17,11 @@ public interface MonitorAlertChannelMapper
 
     List<MonitorAlertChannel> selectEnabledTelegramChannelsByCreateBy(String createBy);
 
+    Long countAlertChannelByCreateBy(String createBy);
+
     List<MonitorAlertChannel> selectAssignedChannelsByAppId(Long appId);
+
+    List<MonitorAlertChannel> selectAssignedChannelsByAppIds(List<Long> appIds);
 
     List<MonitorAlertChannel> selectEnabledChannelsByAppId(Long appId);
 

@@ -408,6 +408,7 @@ export default {
           this.open = false
           this.getList()
           this.getBindingInfo()
+          window.dispatchEvent(new Event("monitor-quota-refresh"))
         })
       })
     },
@@ -421,6 +422,8 @@ export default {
       }).then(() => {
         this.$modal.msgSuccess("删除成功")
         this.getList()
+        this.getBindingInfo()
+        window.dispatchEvent(new Event("monitor-quota-refresh"))
       }).catch(() => {})
     }
   }
