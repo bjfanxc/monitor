@@ -394,9 +394,6 @@ public class MonitorAppServiceImpl implements IMonitorAppService {
             if (response.statusCode() == 404) {
                 return ScanOutcome.offline("HTTP模式：Google Play返回" + response.statusCode());
             }
-            // if (response.statusCode() >= 400) {
-            //     return ScanOutcome.offline("HTTP status code alert: " + response.statusCode());
-            // }
             return evaluateGooglePlayDocument(response.body(), detailUrl, SCAN_MODE_HTTP);
         } catch (Exception e) {
             return ScanOutcome.unknown("HTTP模式：请求失败 - " + e.getMessage());
